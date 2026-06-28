@@ -53,9 +53,9 @@ ghcr.io/ssabv/123pan-strm-docker:latest
 docker run -d \
   --name 123pan-strm \
   --restart unless-stopped \
-  -p 12366:8000 \
+  -p 8000:8000 \
   -e TZ=Asia/Shanghai \
-  -e SERVER_BASE=http://192.168.31.189:12366 \
+  -e SERVER_BASE=http://192.168.31.189:8000 \
   -e DATA_DIR=/data \
   -e SETTINGS_PATH=/data/settings.yaml \
   -e CACHE_PATH=/data/cache.json \
@@ -68,13 +68,13 @@ docker run -d \
 然后打开：
 
 ```text
-http://你的NAS_IP:12366
+http://你的NAS_IP:8000
 ```
 
 例如：
 
 ```text
-http://192.168.31.189:12366
+http://192.168.31.189:8000
 ```
 
 ---
@@ -90,14 +90,14 @@ services:
     container_name: 123pan-strm
     restart: unless-stopped
     ports:
-      - "12366:8000"
+      - "8000:8000"
     environment:
       - TZ=Asia/Shanghai
       - DATA_DIR=/data
       - SETTINGS_PATH=/data/settings.yaml
       - CACHE_PATH=/data/cache.json
       - STRM_OUTPUT_DIR=/strm
-      - SERVER_BASE=http://192.168.31.189:12366
+      - SERVER_BASE=http://192.168.31.189:8000
       - HOST=0.0.0.0
       - PORT=8000
     volumes:
@@ -123,13 +123,13 @@ docker logs -f 123pan-strm
 
 ```yaml
 ports:
-  - "12366:8000"
+  - "8000:8000"
 ```
 
 意思是：
 
 ```text
-NAS外部访问端口 12366 -> 容器内部端口 8000
+NAS外部访问端口 8000 -> 容器内部端口 8000
 ```
 
 如果你想直接用 8000：
@@ -142,7 +142,7 @@ ports:
 同时把：
 
 ```yaml
-SERVER_BASE=http://192.168.31.189:12366
+SERVER_BASE=http://192.168.31.189:8000
 ```
 
 改成：
@@ -158,7 +158,7 @@ SERVER_BASE=http://192.168.31.189:8000
 1. 浏览器打开：
 
 ```text
-http://NAS_IP:12366
+http://NAS_IP:8000
 ```
 
 2. 填写 123 云盘账号和密码；
@@ -174,7 +174,7 @@ http://NAS_IP:12366
 7. 设置服务地址，例如：
 
 ```text
-http://192.168.31.189:12366
+http://192.168.31.189:8000
 ```
 
 8. 点击生成 STRM；
@@ -187,7 +187,7 @@ http://192.168.31.189:12366
 生成的 STRM 类似：
 
 ```text
-http://192.168.31.189:12366/play/0/dd0417083bd4f658115b1116a823daa5/6981086608/xxx.mkv
+http://192.168.31.189:8000/play/0/dd0417083bd4f658115b1116a823daa5/6981086608/xxx.mkv
 ```
 
 最后保留原文件后缀，例如：
@@ -250,7 +250,8 @@ volumes:
 - NAS 部署时请写 NAS 局域网 IP；
 - 首次播放会触发秒传和直链获取，可能等待几秒；
 - 如果 JSON 里的 ETag 是 Base62，工具会自动尝试转换；
-- 如果 123 登录失败，请在 Web UI 重新保存账号密码。
+- 如果 123 登录失败，请在 Web UI 重新保存账号密码；
+- **如果你修改了 123 账号或密码，请删除 `/data/cache.json` 后重启容器**，否则旧 token 可能还会继续被使用。
 
 ---
 
