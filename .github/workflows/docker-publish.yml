@@ -11,7 +11,8 @@ permissions:
   packages: write
 
 jobs:
-  docker:
+  ghcr:
+    name: Build and push to GHCR
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,7 +31,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Docker metadata
+      - name: Docker metadata for GHCR
         id: meta
         uses: docker/metadata-action@v5
         with:
@@ -40,7 +41,48 @@ jobs:
             type=sha,prefix=sha-
             type=ref,event=tag
 
-      - name: Build and push
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  dockerhub:
+    name: Build and push to Docker Hub
+    runs-on: ubuntu-latest
+    # 需要在仓库 Settings -> Secrets and variables -> Actions 中设置：
+    # DOCKERHUB_USERNAME 和 DOCKERHUB_TOKEN
+    if: ${{ vars.ENABLE_DOCKERHUB == 'true' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Docker metadata for Docker Hub
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/123pan-strm-docker
+          tags: |
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha,prefix=sha-
+            type=ref,event=tag
+
+      - name: Build and push to Docker Hub
         uses: docker/build-push-action@v6
         with:
           context: .
