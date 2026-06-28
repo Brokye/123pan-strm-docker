@@ -49,11 +49,19 @@ https://123pan.cn/s/c42ZVv-4Zep3
 
 ## 镜像地址
 
+默认使用 Docker Hub 镜像：
+
+```text
+ssabc/123pan-strm-docker:latest
+```
+
+备用 GHCR 镜像：
+
 ```text
 ghcr.io/ssabv/123pan-strm-docker:latest
 ```
 
-> 如果拉取提示没有权限，请到 GitHub Packages 页面把该镜像设为 Public，或先执行 `docker login ghcr.io`。
+普通用户建议直接使用 Docker Hub 镜像，NAS 拉取更方便。
 
 ---
 
@@ -74,7 +82,7 @@ docker run -d \
   -e STRM_OUTPUT_DIR=/strm \
   -v ./data:/data \
   -v ./strm:/strm \
-  ghcr.io/ssabv/123pan-strm-docker:latest
+  ssabc/123pan-strm-docker:latest
 ```
 
 然后打开：
@@ -91,37 +99,6 @@ http://192.168.31.189:8000
 
 ---
 
-## Docker Hub 镜像
-
-用户也可以直接拉取 Docker Hub 镜像：
-
-```bash
-docker pull ssabc/123pan-strm-docker:latest
-```
-
-运行示例：
-
-```bash
-docker run -d \
-  --name 123pan-strm \
-  --restart unless-stopped \
-  -p 8000:8000 \
-  -e TZ=Asia/Shanghai \
-  -e SERVER_BASE=http://你的NAS_IP:8000 \
-  -e DATA_DIR=/data \
-  -e SETTINGS_PATH=/data/settings.yaml \
-  -e CACHE_PATH=/data/cache.json \
-  -e STRM_OUTPUT_DIR=/strm \
-  -v ./data:/data \
-  -v ./strm:/strm \
-  ssabc/123pan-strm-docker:latest
-```
-
-维护者启用 Docker Hub 自动构建需要在 GitHub 仓库设置中添加：
-
-- `Secrets`：`DOCKERHUB_USERNAME`
-- `Secrets`：`DOCKERHUB_TOKEN`
-- `Variables`：`ENABLE_DOCKERHUB=true`
 
 ## Docker Compose 启动
 
@@ -130,7 +107,7 @@ docker run -d \
 ```yaml
 services:
   123pan-strm:
-    image: ghcr.io/ssabv/123pan-strm-docker:latest
+    image: ssabc/123pan-strm-docker:latest
     container_name: 123pan-strm
     restart: unless-stopped
     ports:
