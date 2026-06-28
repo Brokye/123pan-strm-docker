@@ -264,6 +264,27 @@ volumes:
 
 ---
 
+## 项目来源
+
+本项目基于以下开源项目改造：
+
+```text
+https://github.com/realcwj/123Pan-Unlimited-WebDAV
+```
+
+原项目主要提供 123 云盘无限制 WebDAV 挂载能力。
+
+本项目在其基础上进行了改造：
+
+- 去掉 WebDAV 挂载大目录的使用方式；
+- 改为保存秒传 JSON 并直接生成 STRM；
+- 播放 STRM 时通过 `/play/{id}/{etag}/{size}/{filename}` 自动获取 123 真实直链；
+- 增加 Docker / NAS 一体化部署和 Web UI。
+
+感谢原项目作者的工作。
+
+---
+
 ## 注意事项
 
 - 播放时容器必须保持运行；
