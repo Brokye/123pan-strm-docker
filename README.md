@@ -93,10 +93,10 @@ http://192.168.31.189:8000
 
 ## Docker Hub 镜像
 
-如果仓库已配置 Docker Hub 自动构建，用户也可以直接拉取 Docker Hub 镜像：
+用户也可以直接拉取 Docker Hub 镜像：
 
 ```bash
-docker pull DOCKERHUB_USERNAME/123pan-strm-docker:latest
+docker pull ssabc/123pan-strm-docker:latest
 ```
 
 运行示例：
@@ -114,7 +114,7 @@ docker run -d \
   -e STRM_OUTPUT_DIR=/strm \
   -v ./data:/data \
   -v ./strm:/strm \
-  DOCKERHUB_USERNAME/123pan-strm-docker:latest
+  ssabc/123pan-strm-docker:latest
 ```
 
 维护者启用 Docker Hub 自动构建需要在 GitHub 仓库设置中添加：
