@@ -1,6 +1,6 @@
 services:
   123pan-strm:
-    image: ghcr.io/ssabv/123pan-strm-docker:latest
+    image: ssabc/123pan-strm-docker:latest
     container_name: 123pan-strm
     restart: unless-stopped
     ports:
