@@ -1,0 +1,22 @@
+services:
+  123pan-strm:
+    build: .
+    container_name: 123pan-strm
+    restart: unless-stopped
+    ports:
+      - "12366:8000"
+    environment:
+      - TZ=Asia/Shanghai
+      - DATA_DIR=/data
+      - SETTINGS_PATH=/data/settings.yaml
+      - CACHE_PATH=/data/cache.json
+      - STRM_OUTPUT_DIR=/strm
+      # 改成你的 NAS 局域网 IP；STRM 文件里会写这个地址
+      - SERVER_BASE=http://192.168.31.189:12366
+      - HOST=0.0.0.0
+      - PORT=8000
+    volumes:
+      # 保存账号配置、秒传 JSON 库、token 缓存
+      - ./data:/data
+      # 生成的 STRM 输出目录，建议映射到你的媒体库路径
+      - ./strm:/strm

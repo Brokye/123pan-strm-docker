@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.env
+/data/
+/strm/
+strm_data/
+cache.json
+*.log
+.DS_Store
