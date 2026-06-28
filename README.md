@@ -91,6 +91,38 @@ http://192.168.31.189:8000
 
 ---
 
+## Docker Hub 镜像
+
+如果仓库已配置 Docker Hub 自动构建，用户也可以直接拉取 Docker Hub 镜像：
+
+```bash
+docker pull DOCKERHUB_USERNAME/123pan-strm-docker:latest
+```
+
+运行示例：
+
+```bash
+docker run -d \
+  --name 123pan-strm \
+  --restart unless-stopped \
+  -p 8000:8000 \
+  -e TZ=Asia/Shanghai \
+  -e SERVER_BASE=http://你的NAS_IP:8000 \
+  -e DATA_DIR=/data \
+  -e SETTINGS_PATH=/data/settings.yaml \
+  -e CACHE_PATH=/data/cache.json \
+  -e STRM_OUTPUT_DIR=/strm \
+  -v ./data:/data \
+  -v ./strm:/strm \
+  DOCKERHUB_USERNAME/123pan-strm-docker:latest
+```
+
+维护者启用 Docker Hub 自动构建需要在 GitHub 仓库设置中添加：
+
+- `Secrets`：`DOCKERHUB_USERNAME`
+- `Secrets`：`DOCKERHUB_TOKEN`
+- `Variables`：`ENABLE_DOCKERHUB=true`
+
 ## Docker Compose 启动
 
 新建 `docker-compose.yml`：
