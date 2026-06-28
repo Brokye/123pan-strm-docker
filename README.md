@@ -35,6 +35,18 @@
 
 ---
 
+## 秒传 JSON 从哪里来？
+
+秒传 JSON 文件可以使用 **123FastLink** 生成。
+
+测试 JSON 文件链接：
+
+```text
+https://123pan.cn/s/c42ZVv-4Zep3
+```
+
+下载或生成 JSON 后，在本工具 Web UI 中选择 JSON 文件或粘贴 JSON 内容，然后保存到库即可生成 STRM。
+
 ## 镜像地址
 
 ```text
