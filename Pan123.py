@@ -33,7 +33,7 @@ class Pan123:
     def getActionUrl(self, actionName):
         # 执行各类操作的Url
         LoginApi = "https://login.123pan.com/api"
-        MainApi = "https://www.123pan.com/b/api"
+        MainApi = "https://api.123278.com/b/api"
         apis = {
             "SignIn":           f"{LoginApi}/user/sign_in",
             "Logout":           f"{MainApi}/user/logout",
