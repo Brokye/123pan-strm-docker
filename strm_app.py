@@ -87,13 +87,25 @@ def save_config(c: Dict[str, Any]):
 
 
 def update_settings_account(username: str, password: str):
-    """把前端配置的 123 账号密码同步写入 settings.yaml，供 get_file_url.py 使用。"""
+    """把前端配置的 123 账号密码同步写入 settings.yaml；账号变化时自动清理旧 token。"""
     path = SETTINGS_PATH
     data = load_settings_yaml()
-    data["123PAN_USERNAME"] = username or ""
-    data["123PAN_PASSWORD"] = password or ""
+    old_user = data.get("123PAN_USERNAME", "")
+    old_pwd = data.get("123PAN_PASSWORD", "")
+    new_user = username or ""
+    new_pwd = password or ""
+    data["123PAN_USERNAME"] = new_user
+    data["123PAN_PASSWORD"] = new_pwd
     with open(path, "w", encoding="utf-8") as f:
         yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
+    if (old_user != new_user) or (old_pwd != new_pwd):
+        cache_path = Path(os.getenv("CACHE_PATH", str(DATA_DIR / "cache.json")))
+        if cache_path.exists():
+            try:
+                cache_path.unlink()
+                print("检测到123账号或密码变化，已自动删除旧 token 缓存:", cache_path)
+            except Exception as e:
+                print("删除旧 token 缓存失败:", e)
     global settings
     settings = data
 
