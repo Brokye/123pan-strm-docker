@@ -9,22 +9,26 @@ import hashlib
 
 SETTINGS_PATH = os.getenv("SETTINGS_PATH", "settings.yaml")
 CACHE_PATH = os.getenv("CACHE_PATH", "cache.json")
-try:
-    os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True) if os.path.dirname(CACHE_PATH) else None
-except Exception:
-    pass
-if not os.path.exists(CACHE_PATH):
-    with open(CACHE_PATH, "w", encoding="utf-8") as f:
-        json.dump(
-            {
-                "accessToken": "",
-                "tokenCreateTime": "",
-                "lastDeleteTime": "",
-                "accountHash": "",
-            },
-            f,
-            indent=4,
-            ensure_ascii=False)
+def ensure_cache_file():
+    try:
+        os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True) if os.path.dirname(CACHE_PATH) else None
+    except Exception:
+        pass
+    if not os.path.exists(CACHE_PATH):
+        with open(CACHE_PATH, "w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "accessToken": "",
+                    "tokenCreateTime": "",
+                    "lastDeleteTime": "",
+                    "accountHash": "",
+                },
+                f,
+                indent=4,
+                ensure_ascii=False)
+
+
+ensure_cache_file()
 
 def account_hash(username, password):
     raw = f"{username or ''}\n{password or ''}"
@@ -46,6 +50,7 @@ def get_file_url(name, etag, size) -> str:
     with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
         settings_data = yaml.safe_load(f.read())
     current_hash = account_hash(settings_data.get("123PAN_USERNAME"), settings_data.get("123PAN_PASSWORD"))
+    ensure_cache_file()
     # 实例化
     driver = Pan123()
     # 登录账号并保存Token（假设有效期24h）
