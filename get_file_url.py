@@ -132,7 +132,7 @@ def get_file_url(name, etag, size) -> str:
     real_url = download_link.split("params=")[-1].split("&")[0]
     real_url = base64.b64decode(real_url).decode("utf-8")
     # 判断该链接是不是最终链接
-    headers = {"Referer": "https://www.123pan.cn/"}
+    headers = {"Referer": "https://www.123pan.com/"}
     response = requests.get(real_url, headers=headers, allow_redirects=False)
     if response.status_code == 302:
         # 如果是 302 重定向，从 'Location' 头获取最终 URL
