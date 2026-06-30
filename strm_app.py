@@ -46,8 +46,6 @@ def ensure_cache_file():
         print("已自动创建 token 缓存文件:", CACHE_PATH)
 
 
-ensure_cache_file()
-
 VIDEO_EXTS = {'.mp4','.mkv','.ts','.m2ts','.avi','.mov','.wmv','.flv','.rmvb','.webm','.mpg','.mpeg','.iso'}
 SUBTITLE_EXTS = {'.srt','.ass','.ssa','.vtt','.sub','.sup'}
 BAD_CHARS = '<>:"/\\|?*'
@@ -102,10 +100,6 @@ def config() -> Dict[str, Any]:
 def save_config(c: Dict[str, Any]):
     CONFIG_FILE.write_text(json.dumps(c, ensure_ascii=False, indent=2), encoding='utf-8')
 
-
-# 首次启动自动生成 Web 配置文件
-if not CONFIG_FILE.exists():
-    save_config(config())
 
 
 def update_settings_account(username: str, password: str):
@@ -288,16 +282,6 @@ class ConfigReq(BaseModel):
 app = FastAPI(title='123 秒传 JSON -> STRM', docs_url=None, redoc_url=None)
 
 
-@app.on_event("startup")
-def startup_init_files():
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    LIB_DIR.mkdir(parents=True, exist_ok=True)
-    ensure_cache_file()
-    if not SETTINGS_PATH.exists():
-        SETTINGS_PATH.write_text((BASE_DIR / "settings.yaml").read_text(encoding="utf-8"), encoding="utf-8")
-    if not CONFIG_FILE.exists():
-        save_config(config())
-
 
 HTML = r'''
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>123秒传JSON转STRM</title>
@@ -328,6 +312,8 @@ def post_config(req: ConfigReq):
     c['include_subtitles'] = req.include_subtitles
     save_config(c)
     update_settings_account(c.get('pan_username',''), c.get('pan_password',''))
+    # 只在用户保存基础设置后检查/创建 token 缓存文件
+    ensure_cache_file()
     return {"ok": True}
 
 @app.get('/api/libraries')
