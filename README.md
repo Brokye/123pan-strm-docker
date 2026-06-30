@@ -67,6 +67,9 @@ ghcr.io/ssabv/123pan-strm-docker:latest
 
 ## 最简单启动方式：docker run
 
+> 镜像已内置默认持久化路径：`DATA_DIR=/data`、`SETTINGS_PATH=/data/settings.yaml`、`CACHE_PATH=/data/cache.json`、`STRM_OUTPUT_DIR=/strm`，普通用户无需手动填写这些环境变量。
+
+
 把下面的 `192.168.31.189` 改成你的 NAS IP。
 
 ```bash
@@ -76,10 +79,6 @@ docker run -d \
   -p 8000:8000 \
   -e TZ=Asia/Shanghai \
   -e SERVER_BASE=http://192.168.31.189:8000 \
-  -e DATA_DIR=/data \
-  -e SETTINGS_PATH=/data/settings.yaml \
-  -e CACHE_PATH=/data/cache.json \
-  -e STRM_OUTPUT_DIR=/strm \
   -v ./data:/data \
   -v ./strm:/strm \
   ssabc/123pan-strm-docker:latest
@@ -114,10 +113,6 @@ services:
       - "8000:8000"
     environment:
       - TZ=Asia/Shanghai
-      - DATA_DIR=/data
-      - SETTINGS_PATH=/data/settings.yaml
-      - CACHE_PATH=/data/cache.json
-      - STRM_OUTPUT_DIR=/strm
       - SERVER_BASE=http://192.168.31.189:8000
       - HOST=0.0.0.0
       - PORT=8000
