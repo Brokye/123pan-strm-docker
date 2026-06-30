@@ -5,6 +5,7 @@ import yaml
 import os
 import json
 import time
+import hashlib
 
 SETTINGS_PATH = os.getenv("SETTINGS_PATH", "settings.yaml")
 CACHE_PATH = os.getenv("CACHE_PATH", "cache.json")
@@ -19,20 +20,38 @@ if not os.path.exists(CACHE_PATH):
                 "accessToken": "",
                 "tokenCreateTime": "",
                 "lastDeleteTime": "",
+                "accountHash": "",
             },
             f,
             indent=4,
             ensure_ascii=False)
 
+def account_hash(username, password):
+    raw = f"{username or ''}\n{password or ''}"
+    return hashlib.sha256(raw.encode('utf-8')).hexdigest()
+
+
+def reset_cache_for_account_change(cache_data, current_hash):
+    if cache_data.get("accountHash") and cache_data.get("accountHash") != current_hash:
+        print("检测到123账号或密码已变化，自动清理旧token缓存")
+        cache_data["accessToken"] = ""
+        cache_data["tokenCreateTime"] = ""
+        cache_data["lastDeleteTime"] = ""
+    cache_data["accountHash"] = current_hash
+    return cache_data
+
+
 def get_file_url(name, etag, size) -> str:
     # 读取配置文件
     with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
         settings_data = yaml.safe_load(f.read())
+    current_hash = account_hash(settings_data.get("123PAN_USERNAME"), settings_data.get("123PAN_PASSWORD"))
     # 实例化
     driver = Pan123()
     # 登录账号并保存Token（假设有效期24h）
     with open(CACHE_PATH, "r", encoding="utf-8") as f:
         cache_data = json.load(f)
+    cache_data = reset_cache_for_account_change(cache_data, current_hash)
     if cache_data.get("tokenCreateTime") \
         and time.time() - cache_data.get("tokenCreateTime") < 25 * 24 * 60 * 60 \
         and cache_data.get("accessToken"): # accessToken 30天有效, 这里设置为25天, 省事
@@ -47,6 +66,7 @@ def get_file_url(name, etag, size) -> str:
             return "http://222.186.21.40:33333/NGGYU.mp4"
         cache_data["accessToken"] = driver.getAccessToken()
         cache_data["tokenCreateTime"] = int(time.time())
+        cache_data["accountHash"] = current_hash
         with open(CACHE_PATH, "w", encoding="utf-8") as f:
             json.dump(cache_data, f, indent=4, ensure_ascii=False)
     # 创建缓存文件夹
@@ -112,7 +132,7 @@ def get_file_url(name, etag, size) -> str:
     real_url = download_link.split("params=")[-1].split("&")[0]
     real_url = base64.b64decode(real_url).decode("utf-8")
     # 判断该链接是不是最终链接
-    headers = {"Referer": "https://www.123pan.com/"}
+    headers = {"Referer": "https://www.123pan.cn/"}
     response = requests.get(real_url, headers=headers, allow_redirects=False)
     if response.status_code == 302:
         # 如果是 302 重定向，从 'Location' 头获取最终 URL
