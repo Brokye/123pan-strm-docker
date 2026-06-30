@@ -18,8 +18,8 @@ class Pan123:
         # 初始化accessToken和headers
         self.accessToken = None
         self.headers = {
-            "origin":        "https://www.123pan.com",
-            "referer":       "https://www.123pan.com/",
+            "origin":        "https://yun.123pan.com",
+            "referer":       "https://yun.123pan.com/",
             "authorization": None, # Bearer {accessToken}
             "user-agent":    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
             "platform":      "web",
@@ -33,7 +33,7 @@ class Pan123:
     def getActionUrl(self, actionName):
         # 执行各类操作的Url
         LoginApi = "https://login.123pan.com/api"
-        MainApi = "https://www.123pan.com/b/api"
+        MainApi = "https://yun.123pan.com/b/api"
         apis = {
             "SignIn":           f"{LoginApi}/user/sign_in",
             "Logout":           f"{MainApi}/user/logout",
@@ -75,8 +75,8 @@ class Pan123:
             }
         # 发送登录请求
         headers = {
-			"origin": "https://www.123pan.com",
-			"referer": "https://www.123pan.com/",
+			"origin": "https://yun.123pan.com",
+			"referer": "https://yun.123pan.com/",
 			"user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/136.0.0.0 Safari/537.36",
 			"platform": "web",
 			"app-version": "3",
