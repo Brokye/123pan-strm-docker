@@ -8,10 +8,6 @@ services:
       - "8000:8000"
     environment:
       - TZ=Asia/Shanghai
-      - DATA_DIR=/data
-      - SETTINGS_PATH=/data/settings.yaml
-      - CACHE_PATH=/data/cache.json
-      - STRM_OUTPUT_DIR=/strm
       # 改成你的 NAS 局域网 IP；STRM 文件里会写这个地址
       - SERVER_BASE=http://192.168.31.189:8000
       - HOST=0.0.0.0
