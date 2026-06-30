@@ -31,10 +31,22 @@ if not SETTINGS_PATH.exists():
         SETTINGS_PATH.write_text((BASE_DIR / "settings.yaml").read_text(encoding="utf-8"), encoding="utf-8")
     except Exception:
         pass
-# 首次启动自动创建 cache.json，避免用户误以为需要手动准备
+# cache.json 持久化路径
 CACHE_PATH = Path(os.getenv("CACHE_PATH", str(DATA_DIR / "cache.json"))).expanduser()
-if not CACHE_PATH.exists():
-    CACHE_PATH.write_text(json.dumps({"accessToken":"", "tokenCreateTime":"", "lastDeleteTime":"", "accountHash":""}, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def ensure_cache_file():
+    """确保 /data/cache.json 一定存在。NAS 空目录挂载时也会自动创建。"""
+    CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    if not CACHE_PATH.exists():
+        CACHE_PATH.write_text(
+            json.dumps({"accessToken": "", "tokenCreateTime": "", "lastDeleteTime": "", "accountHash": ""}, ensure_ascii=False, indent=2),
+            encoding="utf-8"
+        )
+        print("已自动创建 token 缓存文件:", CACHE_PATH)
+
+
+ensure_cache_file()
 
 VIDEO_EXTS = {'.mp4','.mkv','.ts','.m2ts','.avi','.mov','.wmv','.flv','.rmvb','.webm','.mpg','.mpeg','.iso'}
 SUBTITLE_EXTS = {'.srt','.ass','.ssa','.vtt','.sub','.sup'}
@@ -274,6 +286,18 @@ class ConfigReq(BaseModel):
     pan_password: str = ''
 
 app = FastAPI(title='123 秒传 JSON -> STRM', docs_url=None, redoc_url=None)
+
+
+@app.on_event("startup")
+def startup_init_files():
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    LIB_DIR.mkdir(parents=True, exist_ok=True)
+    ensure_cache_file()
+    if not SETTINGS_PATH.exists():
+        SETTINGS_PATH.write_text((BASE_DIR / "settings.yaml").read_text(encoding="utf-8"), encoding="utf-8")
+    if not CONFIG_FILE.exists():
+        save_config(config())
+
 
 HTML = r'''
 <!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>123秒传JSON转STRM</title>
