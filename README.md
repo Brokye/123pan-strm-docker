@@ -293,7 +293,7 @@ https://github.com/realcwj/123Pan-Unlimited-WebDAV
 - 首次播放会触发秒传和直链获取，可能等待几秒；
 - 如果 JSON 里的 ETag 是 Base62，工具会自动尝试转换；
 - 如果 123 登录失败，请在 Web UI 重新保存账号密码；
-- **如果你修改了 123 账号或密码，请删除 `/data/cache.json` 后重启容器**，否则旧 token 可能还会继续被使用。
+- 如果你修改了 123 账号或密码，程序会自动清理 `/data/cache.json` 中的旧 token；无需手动删除。
 
 ---
 
