@@ -287,7 +287,7 @@ https://github.com/realcwj/123Pan-Unlimited-WebDAV
 
 ## 注意事项
 
-> 说明：123 分享短链使用 `123pan.cn`；但账号登录、秒传、文件操作等网页 API 当前仍使用 `www.123pan.com/b/api` 和 `login.123pan.com/api`。`www.123pan.cn/b/api` 会返回 Not Found，不能用于秒传接口。
+> 说明：本版本尝试将 123 网页 API 主域名切换为 `https://api.123278.com/b/api`；登录仍使用 `https://login.123pan.com/api`，Origin/Referer 仍使用 `https://www.123pan.com/`。
 
 
 - 播放时容器必须保持运行；
