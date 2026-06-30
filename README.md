@@ -287,6 +287,9 @@ https://github.com/realcwj/123Pan-Unlimited-WebDAV
 
 ## 注意事项
 
+> 说明：123 分享短链使用 `123pan.cn`；但账号登录、秒传、文件操作等网页 API 当前仍使用 `www.123pan.com/b/api` 和 `login.123pan.com/api`。`www.123pan.cn/b/api` 会返回 Not Found，不能用于秒传接口。
+
+
 - 播放时容器必须保持运行；
 - STRM 里的地址不要写 `127.0.0.1`，除非播放器也在同一台机器；
 - NAS 部署时请写 NAS 局域网 IP；
