@@ -287,7 +287,7 @@ https://github.com/realcwj/123Pan-Unlimited-WebDAV
 
 ## 注意事项
 
-> 说明：v1.0.5 起，123 登录、秒传、文件操作以及 Origin/Referer 都统一尝试使用 `api.123278.com`：登录 `https://api.123278.com/api/user/sign_in`，文件/秒传 API `https://api.123278.com/b/api`，Referer/Origin `https://api.123278.com/`。
+> 说明：接口域名已恢复原版：登录使用 `https://login.123pan.com/api/user/sign_in`，文件/秒传 API 使用 `https://www.123pan.com/b/api`，Referer/Origin 使用 `https://www.123pan.com/`。本版本仅保留“修改账号密码后自动清理旧 token 缓存”的修复。
 
 
 - 播放时容器必须保持运行；
