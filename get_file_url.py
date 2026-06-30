@@ -28,8 +28,6 @@ def ensure_cache_file():
                 ensure_ascii=False)
 
 
-ensure_cache_file()
-
 def account_hash(username, password):
     raw = f"{username or ''}\n{password or ''}"
     return hashlib.sha256(raw.encode('utf-8')).hexdigest()
@@ -50,7 +48,6 @@ def get_file_url(name, etag, size) -> str:
     with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
         settings_data = yaml.safe_load(f.read())
     current_hash = account_hash(settings_data.get("123PAN_USERNAME"), settings_data.get("123PAN_PASSWORD"))
-    ensure_cache_file()
     # 实例化
     driver = Pan123()
     # 登录账号并保存Token（假设有效期24h）
