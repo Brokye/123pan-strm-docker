@@ -17,6 +17,8 @@ class Pan123:
         self.sleepTime = lambda: random.uniform(sleepTime*0.6, sleepTime*1.4)
         # 初始化accessToken和headers
         self.accessToken = None
+        self.username = None
+        self.password = None
         self.headers = {
             "origin":        "https://yun.123pan.com",
             "referer":       "https://yun.123pan.com/",
@@ -58,6 +60,8 @@ class Pan123:
 
     def doLogin(self, username, password):
         # 登录操作
+        self.username = username
+        self.password = password
         # 如果包含'@'且'@'后面有'.'，则认为是邮箱格式
         if ("@" in username) and ("." in username.split("@")[-1]):
             # 邮箱登录
@@ -111,6 +115,27 @@ class Pan123:
     
     def getAccessToken(self):
         return self.accessToken
+
+    def request_json(self, method, url, retry=True, **kwargs):
+        """统一请求封装：如果 token 失效(code=401)，自动重新登录并重试一次。"""
+        try:
+            if method.lower() == "post":
+                resp = requests.post(url=url, **kwargs)
+            else:
+                resp = requests.get(url=url, **kwargs)
+            data = resp.json()
+        except Exception as e:
+            logger.error(f"请求或解析JSON失败: {url}, {e}", exc_info=True)
+            raise
+        if isinstance(data, dict) and data.get("code") == 401 and retry and self.username and self.password:
+            logger.info("检测到123 token失效，自动重新登录并重试")
+            if self.doLogin(self.username, self.password):
+                if method.lower() == "post":
+                    resp = requests.post(url=url, **kwargs)
+                else:
+                    resp = requests.get(url=url, **kwargs)
+                data = resp.json()
+        return data
     
     def doLogout(self):
         # 注销操作
@@ -252,11 +277,12 @@ class Pan123:
             # "RequestSource": None,
         }
         try:
-            response_data = requests.post(
+            response_data = self.request_json(
+                "post",
                 url = self.getActionUrl("Mkdir"),
                 headers = self.headers,
                 json = body
-            ).json()
+            )
             if response_data.get("code") == 0:
                 if raw_data:
                     return {"isFinish": True, "message": response_data.get("data")}
@@ -283,11 +309,12 @@ class Pan123:
             "duplicate": 2, # 2->覆盖 1->重命名 0->默认
         }
         try:
-            response_data = requests.post(
+            response_data = self.request_json(
+                "post",
                 url = self.getActionUrl("UploadRequest"),
                 headers = self.headers,
                 json = body
-            ).json()
+            )
             if response_data.get("code") == 0:
                 fileId = response_data.get("data").get("Info").get("FileId")
                 logger.debug(f"上传文件成功: {fileName}, fileId: {fileId}, parentFileId: {parentFileId}")
@@ -363,11 +390,12 @@ class Pan123:
         "size": size
         }
         try:
-            response_data = requests.post(
+            response_data = self.request_json(
+                "post",
                 url = self.getActionUrl("DownloadInfo"),
                 headers = self.headers,
                 json = body
-            ).json()
+            )
             if response_data.get("code") == 0:
                 logger.debug(f"获取文件下载链接成功: {response_data}")
                 return {"isFinish": True, "message": response_data.get("data").get("DownloadUrl")}
