@@ -152,6 +152,18 @@ def get_file_url(name, etag, size) -> str:
         print(f"Request failed with status code: {response.status_code}")
         return None
     
+    # 如果播放过程中自动重新登录刷新了 token，写回 cache.json
+    try:
+        if driver.getAccessToken() and driver.getAccessToken() != cache_data.get("accessToken"):
+            cache_data["accessToken"] = driver.getAccessToken()
+            cache_data["tokenCreateTime"] = int(time.time())
+            cache_data["accountHash"] = current_hash
+            with open(CACHE_PATH, "w", encoding="utf-8") as f:
+                json.dump(cache_data, f, indent=4, ensure_ascii=False)
+            print("已写回刷新后的123 token缓存")
+    except Exception as e:
+        print("写回刷新token失败:", e)
+
     print(f"获取到 {name} 的真实 URL: {final_url}")
 
     return final_url
