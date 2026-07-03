@@ -1,107 +1,73 @@
 # 123云盘秒传JSON转STRM无限制挂载工具
 
-把 **123 云盘秒传 JSON** 转成媒体库可识别的 **STRM 文件**。
+[![Docker Image](https://img.shields.io/badge/docker-ready-blue)]()
+[![Platform](https://img.shields.io/badge/platform-amd64%20%7C%20arm64-green)]()
+[![License](https://img.shields.io/badge/license-GPL--3.0-orange)]()
 
-适合在 NAS / Docker 上部署，配合 Emby、Jellyfin、Plex、Infuse、VidHub 等使用。
+一个面向 NAS / Docker 的 123 云盘媒体库 STRM 工具。
 
----
+本项目可以将 123 云盘秒传 JSON 转换为 STRM 文件，并在播放时自动秒传到 123 云盘缓存目录，获取真实下载直链后 302 跳转，适合 Emby / Jellyfin / Plex / Infuse / VidHub 等媒体库使用。
 
-## 它是干什么的？
+## 项目特点
 
-你有一个秒传 JSON，例如：
+- 秒传 JSON 转 STRM
+- 不受 123 云盘容量限制
+- Docker 一键部署
+- 支持 NAS 长期运行
+- 支持 302 直链播放
+- 支持 Base62 ETag
+- 支持字幕 STRM 生成
+- 支持账号密码 Web UI 配置
+- 避免 WebDAV 大目录卡顿
 
-```json
-{
-  "commonPath": "来自：BT磁力链下载/",
-  "files": [
-    {
-      "etag": "5p0BMpoLKsX7nCPS6tMZOb",
-      "size": "13599051679",
-      "path": "电影/xxx/xxx.mkv"
-    }
-  ]
-}
-```
-
-本工具可以：
-
-1. 保存这个 JSON；
-2. 按 JSON 里的目录结构生成 `.strm`；
-3. 播放 STRM 时自动秒传到你的 123 云盘缓存目录；
-4. 获取真实下载直链；
-5. 302 跳转播放。
-
-不走 WebDAV，所以不会因为大目录 PROPFIND 卡死。
-
----
-
-## 秒传 JSON 从哪里来？
-
-秒传 JSON 文件可以使用 **[123FastLink](https://github.com/Bao-qing/123FastLink)** 生成。
-
-测试 JSON 文件链接：
+## 工作原理
 
 ```text
-https://123pan.cn/s/c42ZVv-4Zep3
+秒传 JSON
+  ↓
+生成 STRM
+  ↓
+媒体库读取 STRM
+  ↓
+请求 /play/{id}/{etag}/{size}/{filename}
+  ↓
+自动秒传到 123 云盘缓存目录
+  ↓
+获取真实下载链接
+  ↓
+302 跳转播放
 ```
 
-下载或生成 JSON 后，在本工具 Web UI 中选择 JSON 文件或粘贴 JSON 内容，然后保存到库即可生成 STRM。
+## 镜像
 
-## 镜像地址
-
-默认使用 Docker Hub 镜像：
+Docker Hub：
 
 ```text
 ssabc/123pan-strm-docker:latest
 ```
 
-备用 GHCR 镜像：
+GHCR：
 
 ```text
 ghcr.io/ssabv/123pan-strm-docker:latest
 ```
 
-普通用户建议直接使用 Docker Hub 镜像，NAS 拉取更方便。
+## 部署
 
----
-
-## 最简单启动方式：docker run
-
-> 镜像已内置默认持久化路径：`DATA_DIR=/data`、`SETTINGS_PATH=/data/settings.yaml`、`CACHE_PATH=/data/cache.json`、`STRM_OUTPUT_DIR=/strm`，普通用户无需手动填写这些环境变量。
-
-
-把下面的 `192.168.31.189` 改成你的 NAS IP。
+### Docker Run
 
 ```bash
 docker run -d \
   --name 123pan-strm \
   --restart unless-stopped \
   -p 8000:8000 \
-  -e TZ=Asia/Shanghai \
-  -e SERVER_BASE=http://192.168.31.189:8000 \
-  -v ./data:/data \
-  -v ./strm:/strm \
+  -e SERVER_BASE=http://你的NAS_IP:8000 \
+  -v /你的路径/data:/data \
+  -v /你的路径/strm:/strm \
   ssabc/123pan-strm-docker:latest
 ```
 
-然后打开：
-
-```text
-http://你的NAS_IP:8000
-```
-
-例如：
-
-```text
-http://192.168.31.189:8000
-```
-
----
-
-
-## Docker Compose 启动
-
-新建 `docker-compose.yml`：
+### Docker Compose
 
 ```yaml
 services:
@@ -113,194 +79,104 @@ services:
       - "8000:8000"
     environment:
       - TZ=Asia/Shanghai
-      - SERVER_BASE=http://192.168.31.189:8000
-      - HOST=0.0.0.0
-      - PORT=8000
+      - SERVER_BASE=http://你的NAS_IP:8000
     volumes:
       - ./data:/data
       - ./strm:/strm
 ```
 
-启动：
-
 ```bash
 docker compose up -d
 ```
 
-查看日志：
+## 配置说明
 
-```bash
-docker logs -f 123pan-strm
-```
-
----
-
-## 端口怎么理解？
-
-```yaml
-ports:
-  - "8000:8000"
-```
-
-意思是：
-
-```text
-NAS外部访问端口 8000 -> 容器内部端口 8000
-```
-
-如果你想直接用 8000：
-
-```yaml
-ports:
-  - "8000:8000"
-```
-
-同时把：
-
-```yaml
-SERVER_BASE=http://192.168.31.189:8000
-```
-
-改成：
-
-```yaml
-SERVER_BASE=http://192.168.31.189:8000
-```
-
----
-
-## Web UI 使用流程
-
-1. 浏览器打开：
-
-```text
-http://NAS_IP:8000
-```
-
-2. 填写 123 云盘账号和密码；
-3. 点击保存设置；
-4. 上传或粘贴秒传 JSON；
-5. 点击保存到库；
-6. 设置输出目录，Docker 内通常是：
-
-```text
-/strm
-```
-
-7. 设置服务地址，例如：
-
-```text
-http://192.168.31.189:8000
-```
-
-8. 点击生成 STRM；
-9. 把宿主机的 `./strm` 或你映射的媒体目录添加到 Emby/Jellyfin。
-
----
-
-## STRM 内容格式
-
-生成的 STRM 类似：
-
-```text
-http://192.168.31.189:8000/play/0/dd0417083bd4f658115b1116a823daa5/6981086608/xxx.mkv
-```
-
-最后保留原文件后缀，例如：
-
-```text
-.mkv
-.mp4
-.ts
-```
-
----
-
-## 持久化目录
-
-| 容器目录 | 用途 |
+| 配置 | 说明 |
 |---|---|
-| `/data` | 保存配置、账号、token、秒传 JSON 库 |
-| `/strm` | 输出 STRM 文件 |
+| `SERVER_BASE` | 写入 STRM 的服务地址 |
+| `/data` | 持久化配置和 JSON 库 |
+| `/strm` | STRM 输出目录 |
 
-本地目录示例：
+## Web UI 使用
 
-```text
-./data/settings.yaml       123账号密码
-./data/config.json         Web UI 配置
-./data/cache.json          123 token 缓存
-./data/libraries/*.json    保存的秒传 JSON 库
-./strm                     生成的 STRM 文件
-```
-
----
-
-## NAS 媒体库映射示例
-
-如果你想把 STRM 直接输出到 NAS 媒体库，例如：
+访问：
 
 ```text
-/volume1/media/strm
+http://你的NAS_IP:8000
 ```
 
-compose 里改成：
+然后：
 
-```yaml
-volumes:
-  - ./data:/data
-  - /volume1/media/strm:/strm
-```
+1. 设置 123 账号密码
+2. 设置服务地址
+3. 设置 STRM 输出目录
+4. 上传秒传 JSON
+5. 保存到库
+6. 生成 STRM
 
-然后 Emby/Jellyfin 添加：
+## 秒传 JSON 来源
+
+秒传 JSON 可以使用：
 
 ```text
-/volume1/media/strm
+https://github.com/Bao-qing/123FastLink
 ```
 
----
+生成。
 
-## 项目来源
+测试 JSON：
 
-本项目基于以下开源项目改造：
+```text
+https://123pan.cn/s/c42ZVv-4Zep3
+```
+
+## 媒体库配置
+
+将生成的 STRM 目录添加到：
+
+- Emby
+- Jellyfin
+- Plex
+- Infuse
+- VidHub
+
+示例：
+
+```text
+/strm/电影
+/strm/动漫
+/strm/剧集
+```
+
+## 常见问题
+
+### 播放时必须运行容器吗？
+
+必须。STRM 文件指向本服务的 `/play` 接口。
+
+### 可以用 127.0.0.1 吗？
+
+如果播放器和服务不在同一台机器，不可以。  
+NAS 部署建议使用 NAS 局域网 IP。
+
+### 为什么不使用 WebDAV？
+
+WebDAV 在大目录下容易卡顿，STRM 更适合媒体库扫描。
+
+### 修改账号密码后需要删除 token 吗？
+
+不需要，程序会自动处理。
+
+## 鸣谢
+
+本项目基于以下项目改造：
 
 ```text
 https://github.com/realcwj/123Pan-Unlimited-WebDAV
 ```
 
-原项目主要提供 123 云盘无限制 WebDAV 挂载能力。
+秒传 JSON 可由以下项目生成：
 
-本项目在其基础上进行了改造：
-
-- 去掉 WebDAV 挂载大目录的使用方式；
-- 改为保存秒传 JSON 并直接生成 STRM；
-- 播放 STRM 时通过 `/play/{id}/{etag}/{size}/{filename}` 自动获取 123 真实直链；
-- 增加 Docker / NAS 一体化部署和 Web UI。
-
-感谢原项目作者的工作。
-
----
-
-## 注意事项
-
-> 说明：v1.0.7 起，网页登录主 API 参考 OpenList 的 123 驱动：登录使用 `https://login.123pan.com/api/user/sign_in`，文件/秒传 API 使用 `https://yun.123pan.com/b/api`，Referer/Origin 使用 `https://yun.123pan.com/`。
-
-
-- 播放时容器必须保持运行；
-- STRM 里的地址不要写 `127.0.0.1`，除非播放器也在同一台机器；
-- NAS 部署时请写 NAS 局域网 IP；
-- 首次播放会触发秒传和直链获取，可能等待几秒；
-- 如果 JSON 里的 ETag 是 Base62，工具会自动尝试转换；
-- 如果 123 登录失败，请在 Web UI 重新保存账号密码；
-- 如果你修改了 123 账号或密码，程序会自动清理 `/data/cache.json` 中的旧 token；无需手动删除。
-
----
-
-## 手动构建
-
-如果你不想拉镜像，也可以本地构建：
-
-```bash
-git clone https://github.com/ssabv/123pan-strm-docker.git
-cd 123pan-strm-docker
-docker compose up -d --build
+```text
+https://github.com/Bao-qing/123FastLink
 ```
