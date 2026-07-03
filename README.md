@@ -1,4 +1,4 @@
-# 123Pan STRM Docker
+# 123云盘秒传 JSON 转 STRM 工具
 
 把 **123 云盘秒传 JSON** 转成媒体库可识别的 **STRM 文件**。
 
@@ -37,7 +37,7 @@
 
 ## 秒传 JSON 从哪里来？
 
-秒传 JSON 文件可以使用 **123FastLink** 生成。
+秒传 JSON 文件可以使用 **[123FastLink](https://github.com/Bao-qing/123FastLink)** 生成。
 
 测试 JSON 文件链接：
 
