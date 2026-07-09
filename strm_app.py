@@ -113,7 +113,8 @@ def list_libraries():
             total=len(d.get('files',[]))
             video=sum(1 for f in d.get('files',[]) if Path(f.get('path','')).suffix.lower() in VIDEO_EXTS)
             rows.append({"id":d.get('id') or p.stem,"name":d.get('name') or p.stem,"total":total,"video":video,"createdAt":d.get('createdAt'),"category":d.get('category','')})
-        except: pass
+        except Exception as e:
+            print(f"跳过无效库文件 {p.name}: {e}")
     return rows
 
 def is_hex_md5(etag:str)->bool: return bool(re.fullmatch(r"[0-9a-fA-F]{32}",str(etag or "")))
