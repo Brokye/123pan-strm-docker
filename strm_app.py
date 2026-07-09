@@ -7,9 +7,10 @@ from pathlib import Path
 from typing import Any, Dict, List
 from urllib.parse import quote
 
+import requests
 import uvicorn
 import yaml
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, File, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 
@@ -50,6 +51,14 @@ VIDEO_EXTS = {'.mp4','.mkv','.ts','.m2ts','.avi','.mov','.wmv','.flv','.rmvb','.
 SUBTITLE_EXTS = {'.srt','.ass','.ssa','.vtt','.sub','.sup'}
 BAD_CHARS = '<>:"/\\|?*'
 
+CATEGORY_DIRS = {
+    "电影": "电影",
+    "剧集": "剧集",
+    "动漫": "动漫",
+    "纪录片": "纪录片",
+    "综艺": "综艺",
+}
+
 
 def load_settings_yaml():
     with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
@@ -83,6 +92,7 @@ def config() -> Dict[str, Any]:
             c.setdefault("output_dir", DEFAULT_OUTPUT_DIR)
             c.setdefault("server_base", os.getenv("SERVER_BASE", f"http://127.0.0.1:{settings.get('WEBDAV_PORT',8000)}"))
             c.setdefault("include_subtitles", False)
+            c.setdefault("mode", "cache")
             c.setdefault("pan_username", settings.get("123PAN_USERNAME", ""))
             c.setdefault("pan_password", settings.get("123PAN_PASSWORD", ""))
             return c
@@ -92,6 +102,7 @@ def config() -> Dict[str, Any]:
         "output_dir": DEFAULT_OUTPUT_DIR,
         "server_base": os.getenv("SERVER_BASE", f"http://127.0.0.1:{settings.get('WEBDAV_PORT',8000)}"),
         "include_subtitles": False,
+        "mode": "cache",
         "pan_username": settings.get("123PAN_USERNAME", ""),
         "pan_password": settings.get("123PAN_PASSWORD", ""),
     }
@@ -137,7 +148,7 @@ def load_lib(lib_id: str) -> Dict[str, Any]:
     return json.loads(p.read_text(encoding='utf-8'))
 
 
-def normalize_library(raw: Any, name: str = '') -> Dict[str, Any]:
+def normalize_library(raw: Any, name: str = '', category: str = '') -> Dict[str, Any]:
     if isinstance(raw, dict) and isinstance(raw.get('files'), list):
         files = raw['files']
         common = raw.get('commonPath','')
@@ -164,7 +175,7 @@ def normalize_library(raw: Any, name: str = '') -> Dict[str, Any]:
             size_int = 0
         out_files.append({"idx": len(out_files), "path": str(path).replace('\\','/'), "etag": str(etag), "size": size_int})
     lib_id = safe_name((name or meta.get('commonPath') or meta.get('name') or f"library_{int(time.time())}").strip('/\\'))
-    return {"id": lib_id, "name": (name or meta.get('commonPath') or lib_id).strip('/\\'), "commonPath": common, "createdAt": int(time.time()), "meta": meta, "files": out_files}
+    return {"id": lib_id, "name": (name or meta.get('commonPath') or lib_id).strip('/\\'), "commonPath": common, "createdAt": int(time.time()), "meta": meta, "files": out_files, "category": category}
 
 
 def list_libraries():
@@ -174,7 +185,7 @@ def list_libraries():
             d = json.loads(p.read_text(encoding='utf-8'))
             total = len(d.get('files', []))
             video = sum(1 for f in d.get('files', []) if Path(f.get('path','')).suffix.lower() in VIDEO_EXTS)
-            rows.append({"id": d.get('id') or p.stem, "name": d.get('name') or p.stem, "total": total, "video": video, "createdAt": d.get('createdAt')})
+            rows.append({"id": d.get('id') or p.stem, "name": d.get('name') or p.stem, "total": total, "video": video, "createdAt": d.get('createdAt'), "category": d.get('category', '')})
         except Exception:
             pass
     return rows
@@ -218,12 +229,12 @@ def base62_to_hex_candidates(etag: str) -> List[str]:
     return out
 
 
-def get_file_url_with_etag_candidates(name: str, etag: str, size: int) -> str:
+def get_file_url_with_etag_candidates(name: str, etag: str, size: int, fast_mode: bool = False) -> str:
     candidates = base62_to_hex_candidates(etag)
     last_url = None
     for e in candidates:
         print(f"尝试 ETag: {etag} -> {e}")
-        url = get_file_url(name=name, etag=e, size=int(size))
+        url = get_file_url(name=name, etag=e, size=int(size), fast_mode=fast_mode)
         last_url = url
         # get_file_url 失败时会返回一个固定兜底 mp4，识别并继续尝试下一个候选
         if url and "222.186.21.40:33333/NGGYU.mp4" not in url:
@@ -232,39 +243,86 @@ def get_file_url_with_etag_candidates(name: str, etag: str, size: int) -> str:
 
 
 def make_play_url(base: str, file_id: int, etag: str, size: int, filename: str) -> str:
-    # 新 STRM 格式：/play/{id}/{etag}/{size}/{原文件名}
-    # 最后一段保留原文件后缀，方便播放器/日志识别。
     return base.rstrip('/') + f"/play/{file_id}/{quote(str(etag), safe='')}/{int(size)}/{quote(filename)}"
+
+
+def download_subtitle_file(file_info: Dict, target_path: Path, fast_mode: bool = False) -> bool:
+    """通过秒传获取字幕文件直链并下载到本地。"""
+    name = Path(file_info['path']).name
+    url = get_file_url_with_etag_candidates(
+        name=name,
+        etag=file_info['etag'],
+        size=int(file_info.get('size') or 0),
+        fast_mode=fast_mode,
+    )
+    if not url or "222.186.21.40:33333/NGGYU.mp4" in url:
+        print(f"字幕下载失败(获取URL失败): {name}")
+        return False
+    try:
+        headers = {"Referer": "https://yun.123pan.com/"}
+        resp = requests.get(url, headers=headers, timeout=30)
+        if resp.status_code == 200:
+            target_path.parent.mkdir(parents=True, exist_ok=True)
+            target_path.write_bytes(resp.content)
+            print(f"字幕下载成功: {target_path}")
+            return True
+    except Exception as e:
+        print(f"字幕下载异常: {name}, {e}")
+    return False
 
 
 def generate_strm(lib_id: str, output_dir: str, server_base: str, include_subtitles=False):
     lib = load_lib(lib_id)
+    category = lib.get('category', '')
+    cfg = config()
+    fast_mode = (cfg.get('mode', 'cache') == 'fast')
+
+    # 根据分类拼接子目录
     out_root = Path(output_dir).expanduser()
+    if category in CATEGORY_DIRS:
+        out_root = out_root / CATEGORY_DIRS[category]
+
     count = 0
+    subtitles = 0
     skipped = 0
     examples = []
     for f in lib.get('files', []):
         rel = safe_rel_path(f['path'])
         ext = rel.suffix.lower()
-        allowed_exts = VIDEO_EXTS | (SUBTITLE_EXTS if include_subtitles else set())
-        if ext not in allowed_exts:
+
+        if ext in VIDEO_EXTS:
+            # 视频：生成 STRM
+            target = out_root / rel.with_suffix(rel.suffix + '.strm')
+            target.parent.mkdir(parents=True, exist_ok=True)
+            original_name = rel.name
+            url = make_play_url(server_base, f['idx'], f['etag'], int(f.get('size') or 0), original_name)
+            target.write_text(url + '\n', encoding='utf-8')
+            count += 1
+            if len(examples) < 10:
+                examples.append(str(target))
+
+        elif include_subtitles and ext in SUBTITLE_EXTS:
+            # 字幕：直接下载实际文件
+            target = out_root / rel
+            if download_subtitle_file(f, target, fast_mode):
+                subtitles += 1
+                if len(examples) < 10:
+                    examples.append(str(target))
+            else:
+                skipped += 1
+        else:
             skipped += 1
-            continue
-        target = out_root / rel.with_suffix(rel.suffix + '.strm')
-        # 如果原文件名是 .mkv，输出 movie.mkv.strm，便于保留原扩展信息
-        target.parent.mkdir(parents=True, exist_ok=True)
-        original_name = rel.name
-        url = make_play_url(server_base, f['idx'], f['etag'], int(f.get('size') or 0), original_name)
-        target.write_text(url + '\n', encoding='utf-8')
-        count += 1
-        if len(examples) < 10:
-            examples.append(str(target))
-    return {"count": count, "skipped": skipped, "output_dir": str(out_root), "examples": examples}
+
+    return {"count": count, "subtitles": subtitles, "skipped": skipped, "output_dir": str(out_root), "examples": examples}
 
 
 class SaveReq(BaseModel):
     name: str = ''
     content: Any
+    category: str = ''
+
+class ModeReq(BaseModel):
+    mode: str = 'cache'
 
 class GenReq(BaseModel):
     lib_id: str
@@ -283,11 +341,23 @@ app = FastAPI(title='123 秒传 JSON -> STRM', docs_url=None, redoc_url=None)
 
 
 
-HTML = r'''
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>123秒传JSON转STRM</title>
-<style>body{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}.wrap{max-width:1200px;margin:0 auto;padding:24px}.title{font-size:28px;font-weight:800}.sub{color:#94a3b8;margin-top:6px}.grid{display:grid;grid-template-columns:420px 1fr;gap:18px;margin-top:20px}.card{background:#1f2937;border:1px solid #334155;border-radius:16px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,.25)}label{display:block;margin:12px 0 6px;color:#cbd5e1;font-size:13px}input,textarea,select{width:100%;box-sizing:border-box;background:#020617;color:#e5e7eb;border:1px solid #475569;border-radius:10px;padding:10px 12px}textarea{height:220px;font-family:Consolas,monospace;font-size:12px}.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;margin-top:12px}.primary{background:#38bdf8;color:#001018}.ok{background:#22c55e;color:#001}.ghost{background:#475569;color:#fff}.danger{background:#ef4444;color:#fff}.row{display:flex;gap:10px}.row .btn{flex:1}.list{display:grid;gap:10px}.item{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px}.muted{color:#94a3b8;font-size:12px}.log{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;height:260px;overflow:auto;font-family:Consolas,monospace;font-size:12px}.pill{display:inline-block;padding:2px 8px;background:#0e7490;border-radius:99px;font-size:12px;margin-left:6px}@media(max-width:900px){.grid{grid-template-columns:1fr}}</style></head><body><div class="wrap"><div class="title">123 秒传 JSON → STRM</div><div class="sub">NAS Docker 一体版 · 持久化保存秒传库 · 直接生成 STRM · 播放时自动秒传并 302 到真实直链</div><div class="grid"><div class="card"><h3>1. 保存秒传 JSON</h3><label>库名称</label><input id="name" placeholder="例如：来自：BT磁力链下载"><label>JSON 内容</label><textarea id="content" placeholder='粘贴 {"files":[{"etag":"...","size":"...","path":"电影/xxx.mkv"}]}'></textarea><div class="row"><button class="btn ghost" onclick="pickFile()">选择JSON文件</button><button class="btn primary" onclick="saveLib()">保存到库</button></div><input id="file" type="file" accept=".json,application/json" style="display:none"><h3>2. 基础设置</h3><label>123账号</label><input id="pan_username" placeholder="手机号/邮箱"><label>123密码</label><input id="pan_password" type="password" placeholder="123云盘密码"><label>STRM 输出目录</label><input id="output_dir"><label>服务地址</label><input id="server_base"><label style="display:flex;gap:8px;align-items:center"><input id="include_subtitles" type="checkbox" style="width:auto"> 生成字幕文件 STRM（.srt/.ass/.ssa/.vtt/.sub/.sup）</label><button class="btn ok" onclick="saveCfg()">保存基础设置</button></div><div class="card"><h3>已保存的秒传库</h3><div id="libs" class="list"></div><h3>日志</h3><div id="log" class="log"></div></div></div></div><script>
-function log(s){let el=document.getElementById('log');el.textContent+=s+'\n';el.scrollTop=el.scrollHeight}async function api(u,opt){let r=await fetch(u,opt);let j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||j.detail||r.status);return j}async function loadCfg(){let c=await api('/api/config');output_dir.value=c.output_dir;server_base.value=c.server_base;include_subtitles.checked=!!c.include_subtitles;pan_username.value=c.pan_username||'';pan_password.value=c.pan_password||''}async function saveCfg(){await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({output_dir:output_dir.value,server_base:server_base.value,pan_username:pan_username.value,pan_password:pan_password.value,include_subtitles:include_subtitles.checked})});log('设置已保存，123账号已同步到 settings.yaml')}function pickFile(){file.click()}file.onchange=async()=>{let f=file.files[0];if(!f)return;name.value=name.value||f.name.replace(/\.json$/,'');content.value=await f.text()};async function saveLib(){try{let raw=JSON.parse(content.value);let j=await api('/api/libraries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name.value,content:raw})});log('保存成功：'+j.id+'，文件数 '+j.files);content.value='';await loadLibs()}catch(e){alert(e.message)}}async function loadLibs(){let j=await api('/api/libraries');libs.innerHTML=j.items.map(x=>`<div class="item"><b>${x.name}</b><span class="pill">视频 ${x.video}</span><span class="pill">总 ${x.total}</span><div class="muted">ID: ${x.id}</div><div class="row"><button class="btn primary" onclick="gen('${x.id}')">生成STRM</button><button class="btn danger" onclick="delLib('${x.id}')">删除</button></div></div>`).join('')||'<div class="muted">暂无</div>'}async function gen(id){try{let j=await api('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lib_id:id,output_dir:output_dir.value,server_base:server_base.value,include_subtitles:include_subtitles.checked})});log('生成完成：'+j.count+' 个 STRM，跳过非视频 '+j.skipped+' 个\n输出：'+j.output_dir+'\n示例：\n'+j.examples.join('\n'))}catch(e){alert(e.message)}}async function delLib(id){if(!confirm('删除库 '+id+' ?'))return;await api('/api/libraries/'+encodeURIComponent(id),{method:'DELETE'});await loadLibs()}loadCfg();loadLibs();</script></body></html>
-'''
+HTML = r'''<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>123秒传JSON转STRM</title>
+<style>body{margin:0;background:#0f172a;color:#e5e7eb;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif}.wrap{max-width:1200px;margin:0 auto;padding:24px}.title{font-size:28px;font-weight:800}.sub{color:#94a3b8;margin-top:6px}.modebar{display:flex;align-items:center;gap:14px;background:#1e293b;border:2px solid #334155;border-radius:16px;padding:16px 20px;margin-top:18px;transition:all .4s}.modebar.fast{background:#2d1518;border-color:#dc2626;box-shadow:0 0 20px rgba(220,38,38,.15)}.modebar .mode-icon{font-size:28px;flex-shrink:0;transition:all .4s}.modebar .mode-text{flex:1}.modebar .mode-title{font-size:16px;font-weight:700;color:#e5e7eb;transition:color .4s}.modebar.fast .mode-title{color:#fca5a5}.modebar .mode-desc{font-size:12px;color:#94a3b8;margin-top:4px;transition:color .4s}.modebar.fast .mode-desc{color:#f87171}.modebar .mode-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:11px;font-weight:700;background:#0e7490;color:#fff;transition:all .4s}.modebar.fast .mode-badge{background:#dc2626;animation:pulse 2s infinite}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.6}}.grid{display:grid;grid-template-columns:420px 1fr;gap:18px;margin-top:18px}.card{background:#1f2937;border:1px solid #334155;border-radius:16px;padding:18px;box-shadow:0 12px 30px rgba(0,0,0,.25)}label{display:block;margin:12px 0 6px;color:#cbd5e1;font-size:13px}input,textarea,select{width:100%;box-sizing:border-box;background:#020617;color:#e5e7eb;border:1px solid #475569;border-radius:10px;padding:10px 12px}textarea{height:220px;font-family:Consolas,monospace;font-size:12px}.btn{border:0;border-radius:10px;padding:11px 14px;font-weight:700;cursor:pointer;margin-top:12px}.primary{background:#38bdf8;color:#001018}.ok{background:#22c55e;color:#001}.ghost{background:#475569;color:#fff}.danger{background:#ef4444;color:#fff}.warn{background:#f59e0b;color:#001}.row{display:flex;gap:10px}.row .btn{flex:1}.list{display:grid;gap:10px}.item{background:#0b1220;border:1px solid #334155;border-radius:12px;padding:12px}.muted{color:#94a3b8;font-size:12px}.log{white-space:pre-wrap;background:#020617;border:1px solid #334155;border-radius:12px;padding:12px;height:260px;overflow:auto;font-family:Consolas,monospace;font-size:12px}.pill{display:inline-block;padding:2px 8px;background:#0e7490;border-radius:99px;font-size:12px;margin-left:6px}.pill-fast{background:#dc2626}.cat-head{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;margin-top:10px;cursor:pointer;user-select:none}.cat-head:hover{background:#273449}.cat-arrow{font-size:12px;transition:transform .2s;color:#94a3b8}.cat-arrow.open{transform:rotate(90deg)}.cat-count{color:#94a3b8;font-size:12px;margin-left:auto}.toggle{display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0}.toggle input{display:none}.toggle .track{width:44px;height:24px;background:#475569;border-radius:99px;position:relative;transition:background .3s;flex-shrink:0}.toggle input:checked+.track{background:#dc2626}.toggle .track::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .3s}.toggle input:checked+.track::after{transform:translateX(20px)}@media(max-width:900px){.grid{grid-template-columns:1fr}}</style></head><body><div class="wrap"><div class="title">123 秒传 JSON → STRM</div><div class="sub">NAS Docker 一体版 · 持久化保存秒传库 · 直接生成 STRM · 播放时自动秒传并 302 到真实直链</div><div class="modebar" id="modebar"><span class="mode-icon" id="modeIcon">🛡️</span><div class="mode-text"><div class="mode-title" id="modeTitle">缓存模式</div><div class="mode-desc" id="modeDesc">文件保存 24 小时后自动清理，适合反复播放</div></div><span class="mode-badge" id="modeBadge">安全</span><label class="toggle"><input id="fastMode" type="checkbox"><span class="track"></span></label></div><div class="grid"><div class="card"><h3>1. 保存秒传 JSON</h3><label>库名称</label><input id="name" placeholder="例如：来自：BT磁力链下载"><label>分类(可选)</label><select id="category"><option value="">未分类</option><option value="电影">电影</option><option value="剧集">剧集</option><option value="动漫">动漫</option><option value="纪录片">纪录片</option><option value="综艺">综艺</option></select><label>JSON 内容</label><textarea id="content" placeholder='粘贴 {"files":[{"etag":"...","size":"...","path":"电影/xxx.mkv"}]}'></textarea><div class="row"><button class="btn ghost" onclick="document.getElementById('file').click()">选择JSON文件</button><button class="btn primary" onclick="saveLib()">保存到库</button></div><input id="file" type="file" accept=".json,application/json" style="position:absolute;left:-9999px"><h3>2. 基础设置</h3><label>123账号</label><input id="pan_username" placeholder="手机号/邮箱"><label>123密码</label><input id="pan_password" type="password" placeholder="123云盘密码"><label>STRM 输出目录</label><input id="output_dir"><label>服务地址</label><input id="server_base"><button class="btn ok" onclick="saveCfg()">保存基础设置</button></div><div class="card"><h3>已保存的秒传库</h3><div class="row"><button class="btn ghost" onclick="exportBackup()">导出备份</button><button class="btn warn" onclick="document.getElementById('restoreFile').click()">导入恢复</button></div><input id="restoreFile" type="file" accept=".json" style="position:absolute;left:-9999px"><div id="libs" class="list"></div><h3>日志</h3><div id="log" class="log"></div></div></div></div><script>
+function log(s){var el=document.getElementById('log');el.textContent+=s+'\n';el.scrollTop=el.scrollHeight}async function api(u,opt){var r=await fetch(u,opt);var j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||j.detail||r.status);return j}
+function _applyModeUI(fast){var bar=document.getElementById('modebar');var icon=document.getElementById('modeIcon');var title=document.getElementById('modeTitle');var desc=document.getElementById('modeDesc');var badge=document.getElementById('modeBadge');if(fast){bar.classList.add('fast');icon.textContent='⚠️';title.textContent='入库模式';desc.textContent='获取直链后 1 分钟即删除，播放完即清理';badge.textContent='即时清理';badge.style.background='#dc2626'}else{bar.classList.remove('fast');icon.textContent='🛡️';title.textContent='缓存模式';desc.textContent='文件保存 24 小时后自动清理，适合反复播放';badge.textContent='安全';badge.style.background='#0e7490'}}
+async function loadMode(){var m=await api('/api/mode');var fast=(m.mode==='fast');document.getElementById('fastMode').checked=fast;_applyModeUI(fast)}
+document.getElementById('fastMode').onchange=async function(){var f=this.checked;_applyModeUI(f);var j=await api('/api/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:f?'fast':'cache'})});log('已切换为：'+j.label)}
+async function loadCfg(){var c=await api('/api/config');document.getElementById('output_dir').value=c.output_dir;document.getElementById('server_base').value=c.server_base;document.getElementById('pan_username').value=c.pan_username||'';document.getElementById('pan_password').value=c.pan_password||''}
+async function saveCfg(){var o=document.getElementById('output_dir').value;var s=document.getElementById('server_base').value;var u=document.getElementById('pan_username').value;var p=document.getElementById('pan_password').value;await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({output_dir:o,server_base:s,pan_username:u,pan_password:p})});log('√ 设置已保存')}
+document.getElementById('file').onchange=async function(){var f=this.files[0];if(!f)return;document.getElementById('name').value=document.getElementById('name').value||f.name.replace(/\.json$/,'');document.getElementById('content').value=await f.text()}
+async function saveLib(){try{var raw=JSON.parse(document.getElementById('content').value);var cat=document.getElementById('category').value;var j=await api('/api/libraries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:document.getElementById('name').value,content:raw,category:cat})});log('√ 保存成功：'+j.id+'，文件数 '+j.files);document.getElementById('content').value='';await loadLibs()}catch(e){alert(e.message)}}
+function _itemHtml(x){return'<div class="item"><b>'+x.name+'</b> <span class="pill">视频 '+x.video+'</span> <span class="pill">总 '+x.total+'</span><div class="muted">ID: '+x.id+'</div><div class="row"><button class="btn primary" onclick="gen(\''+x.id+'\')">生成STRM</button><button class="btn danger" onclick="delLib(\''+x.id+'\')">删除</button></div></div>'}var _catColors={电影:'#a855f7',剧集:'#3b82f6',动漫:'#ec4899',纪录片:'#22c55e',综艺:'#f59e0b','':'#6b7280'};var _catOrder=['电影','剧集','动漫','纪录片','综艺',''];var _catNames={'电影':'电影','剧集':'剧集','动漫':'动漫','纪录片':'纪录片','综艺':'综艺','':'未分类'};async function loadLibs(){var j=await api('/api/libraries');var el=document.getElementById('libs');var items=j.items||[];var groups={};_catOrder.forEach(function(c){groups[c]=[]});items.forEach(function(x){var cat=x.category||'';if(!groups[cat])groups[cat]=[];groups[cat].push(x)});var h='';_catOrder.forEach(function(cat){var g=groups[cat];if(!g||g.length===0)return;h+='<div class="cat-head" onclick="var a=this.querySelector(\'.cat-arrow\');var b=this.nextElementSibling;a.classList.toggle(\'open\');b.style.display=b.style.display===\'none\'?\'block\':\'none\'"><span class="cat-arrow open">▶</span><span class="pill" style="background:'+(_catColors[cat]||'#6b7280')+'">'+(_catNames[cat]||cat||'未分类')+'</span><span class="cat-count">('+g.length+')</span></div><div class="cat-body" style="display:block">'+g.map(_itemHtml).join('')+'</div>'});el.innerHTML=h||'<div class="muted">暂无</div>'}
+async function gen(id){try{var j=await api('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lib_id:id,output_dir:document.getElementById('output_dir').value,server_base:document.getElementById('server_base').value,include_subtitles:true})});log('√ 生成完成：'+j.count+' 个 STRM'+(j.subtitles?', '+j.subtitles+' 个字幕':'')+'，跳过 '+j.skipped+' 个\n输出：'+j.output_dir+'\n示例：\n'+j.examples.join('\n'))}catch(e){alert(e.message)}}
+async function delLib(id){if(!confirm('删除库 '+id+' ?'))return;await api('/api/libraries/'+encodeURIComponent(id),{method:'DELETE'});await loadLibs()}
+async function exportBackup(){var resp=await fetch('/api/backup');var blob=await resp.blob();var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='123pan-strm-backup-'+Date.now()+'.json';a.click();log('√ 备份已下载')}
+document.getElementById('restoreFile').onchange=async function(){var f=this.files[0];if(!f)return;var formData=new FormData();formData.append('file',f);var resp=await fetch('/api/restore/upload',{method:'POST',body:formData});var j=await resp.json();if(!j.ok){alert(j.error);return}log('√ 恢复完成：成功 '+j.restored+' 个，跳过 '+j.skipped+' 个');await loadLibs()}
+loadMode();loadCfg();loadLibs();
+</script></body></html>'''
 
 @app.get('/', response_class=HTMLResponse)
 def index():
@@ -323,7 +393,7 @@ def api_libraries():
 @app.post('/api/libraries')
 def api_save_library(req: SaveReq):
     try:
-        lib = normalize_library(req.content, req.name)
+        lib = normalize_library(req.content, req.name, req.category)
         p = lib_path(lib['id'])
         # 避免同名覆盖时不可控，加时间后缀
         if p.exists():
@@ -356,8 +426,9 @@ def api_generate(req: GenReq):
 
 @app.get('/play/{file_id}/{etag}/{size}/{filename:path}')
 def play_direct(file_id: int, etag: str, size: int, filename: str):
-    # file_id 在新格式中主要作为占位/日志标识；真正秒传依赖 etag + size + filename。
-    url = get_file_url_with_etag_candidates(name=filename, etag=etag, size=int(size))
+    cfg = config()
+    fast_mode = (cfg.get('mode', 'cache') == 'fast')
+    url = get_file_url_with_etag_candidates(name=filename, etag=etag, size=int(size), fast_mode=fast_mode)
     if not url:
         raise HTTPException(500, 'failed to get url')
     return RedirectResponse(url=url, status_code=302)
@@ -365,20 +436,98 @@ def play_direct(file_id: int, etag: str, size: int, filename: str):
 
 @app.get('/play/{lib_id}/{idx}')
 def play_legacy(lib_id: str, idx: int):
-    # 兼容旧版 STRM：/play/{lib_id}/{idx}
     lib = load_lib(lib_id)
     files = lib.get('files', [])
     if idx < 0 or idx >= len(files):
         raise HTTPException(404, 'file not found')
     f = files[idx]
     name = Path(f['path']).name
-    url = get_file_url_with_etag_candidates(name=name, etag=f['etag'], size=int(f.get('size') or 0))
+    cfg = config()
+    fast_mode = (cfg.get('mode', 'cache') == 'fast')
+    url = get_file_url_with_etag_candidates(name=name, etag=f['etag'], size=int(f.get('size') or 0), fast_mode=fast_mode)
     if not url:
         raise HTTPException(500, 'failed to get url')
     return RedirectResponse(url=url, status_code=302)
+
+
+@app.get('/api/mode')
+def api_get_mode():
+    cfg = config()
+    return {"mode": cfg.get('mode', 'cache')}
+
+
+@app.post('/api/mode')
+def api_set_mode(req: ModeReq):
+    new_mode = req.mode
+    if new_mode not in ('cache', 'fast'):
+        return JSONResponse({"ok": False, "error": "mode must be cache or fast"}, status_code=400)
+    cfg = config()
+    cfg['mode'] = new_mode
+    save_config(cfg)
+    label = "入库模式(1分钟清理)" if new_mode == 'fast' else "缓存模式(24小时清理)"
+    return {"ok": True, "mode": new_mode, "label": label}
+
+
+@app.get('/api/backup')
+def api_backup():
+    """导出所有秒传库为备份 JSON 文件（不含账号信息）。"""
+    libraries = []
+    for p in sorted(LIB_DIR.glob('*.json')):
+        try:
+            d = json.loads(p.read_text(encoding='utf-8'))
+            libraries.append(d)
+        except Exception:
+            pass
+    backup_data = {
+        "version": 1,
+        "exportedAt": int(time.time()),
+        "app": "123pan-strm-docker",
+        "libraries": libraries,
+    }
+    return JSONResponse(
+        content=backup_data,
+        headers={"Content-Disposition": f'attachment; filename="123pan-strm-backup-{int(time.time())}.json"'}
+    )
+
+
+@app.post('/api/restore/upload')
+async def api_restore_upload(file: UploadFile = File(...)):
+    """上传备份 JSON 文件恢复秒传库。跳过已存在的同名库。"""
+    try:
+        content = await file.read()
+        data = json.loads(content)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": f"备份文件解析失败: {e}"}, status_code=400)
+    if data.get('app') != '123pan-strm-docker':
+        return JSONResponse({"ok": False, "error": "不支持的备份文件格式"}, status_code=400)
+    libraries = data.get('libraries', [])
+    restored = 0
+    skipped = 0
+    for lib in libraries:
+        lib.setdefault('category', '')
+        lib.setdefault('mode', 'cache')
+        lib_id = lib.get('id') or lib.get('name', '')
+        if not lib_id:
+            continue
+        p = lib_path(lib_id)
+        if p.exists():
+            skipped += 1
+            continue
+        p.write_text(json.dumps(lib, ensure_ascii=False, indent=2), encoding='utf-8')
+        restored += 1
+    return {"ok": True, "restored": restored, "skipped": skipped}
+
 
 if __name__ == '__main__':
     port = int(os.getenv("PORT", settings.get('WEBDAV_PORT', 8000)))
     host = os.getenv("HOST", settings.get('WEBDAV_HOST', '0.0.0.0'))
     print(f"STRM工具启动：http://127.0.0.1:{port}/")
-    uvicorn.run(app, host=host, port=port, log_level='info')
+    uvicorn.run(
+        app,
+        host=host,
+        port=port,
+        log_level='warning',
+        access_log=False,
+        loop='asyncio',
+        reload=False,
+    )
