@@ -6,9 +6,15 @@ import os
 import json
 import time
 import hashlib
+import threading
+from pathlib import Path
 
-SETTINGS_PATH = os.getenv("SETTINGS_PATH", "settings.yaml")
-CACHE_PATH = os.getenv("CACHE_PATH", "cache.json")
+# 与 strm_app.py 保持一致的路径解析
+_BASE_DIR = Path(__file__).resolve().parent
+_DEFAULT_DATA_DIR = Path("/data") if Path("/data").exists() else _BASE_DIR / "strm_data"
+_DATA_DIR = Path(os.getenv("DATA_DIR", str(_DEFAULT_DATA_DIR))).expanduser()
+SETTINGS_PATH = os.getenv("SETTINGS_PATH", str(_DATA_DIR / "settings.yaml"))
+CACHE_PATH = os.getenv("CACHE_PATH", str(_DATA_DIR / "cache.json"))
 def ensure_cache_file():
     try:
         os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True) if os.path.dirname(CACHE_PATH) else None
@@ -43,7 +49,7 @@ def reset_cache_for_account_change(cache_data, current_hash):
     return cache_data
 
 
-def get_file_url(name, etag, size) -> str:
+def get_file_url(name, etag, size, fast_mode=False) -> str:
     # 读取配置文件
     with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
         settings_data = yaml.safe_load(f.read())
@@ -163,6 +169,21 @@ def get_file_url(name, etag, size) -> str:
             print("已写回刷新后的123 token缓存")
     except Exception as e:
         print("写回刷新token失败:", e)
+
+    # 入库模式：获取直链后1分钟异步删除该文件
+    if fast_mode:
+        def _delayed_delete(_driver, _file_data, _name):
+            print(f"入库模式：将于60秒后删除临时文件 {_name}")
+            time.sleep(60)
+            try:
+                result = _driver.deleteFile([_file_data], True)
+                if result.get("isFinish"):
+                    print(f"入库模式：已删除临时文件 {_name}")
+                else:
+                    print(f"入库模式：删除临时文件失败 {_name}: {result.get('message')}")
+            except Exception as e:
+                print(f"入库模式：删除临时文件异常 {_name}: {e}")
+        threading.Thread(target=_delayed_delete, args=(driver, file_data, name), daemon=True).start()
 
     print(f"获取到 {name} 的真实 URL: {final_url}")
 
