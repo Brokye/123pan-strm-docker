@@ -133,7 +133,7 @@ textarea{height:180px;font-family:Consolas,monospace;font-size:14px;resize:verti
 </div>
 
 <script>
-var API='http://127.0.0.1:8000',libCache={},renameLibId=null,mergeLibId=null;
+var API=window.location.origin,libCache={},renameLibId=null,mergeLibId=null;
 function log(s){var el=document.getElementById('log');el.textContent+=s+'\n';el.scrollTop=el.scrollHeight}
 async function api(u,opt){var r=await fetch(API+u,opt);var j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||j.detail||r.status);return j}
 function fmtSize(s){s=parseInt(s)||0;if(s<1024)return s+' B';if(s<1048576)return(s/1024).toFixed(1)+' KB';if(s<1073741824)return(s/1048576).toFixed(1)+' MB';return(s/1073741824).toFixed(2)+' GB';}
