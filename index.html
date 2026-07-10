@@ -1,207 +1,1895 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>123 秒传 STRM</title>
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>123 秒传 STRM · Vision Pro</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#f5f5f7;color:#1d1d1f;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Microsoft YaHei",sans-serif;min-height:100vh;-webkit-font-smoothing:antialiased}
-.wrap{max-width:1300px;margin:0 auto;padding:24px}
-h1{font-size:28px;font-weight:800}.sub{color:#86868b;font-size:14px;margin:6px 0 20px}
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #8e8e93;
+  --accent-blue: #0071e3;
+  --accent-green: #34c759;
+  --accent-red: #ff3b30;
+  --accent-orange: #ff9500;
+  --accent-purple: #af52de;
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-border: rgba(0, 0, 0, 0.08);
+  --divider: rgba(0, 0, 0, 0.06);
+  --hover-bg: rgba(0, 0, 0, 0.03);
+  --log-bg: rgba(245, 245, 247, 0.9);
+  --orb-1: rgba(0, 113, 227, 0.12);
+  --orb-2: rgba(175, 82, 222, 0.1);
+  --orb-3: rgba(52, 199, 89, 0.08);
+  --btn-secondary-bg: rgba(120, 120, 128, 0.12);
+}
 
-.modebar{display:flex;align-items:center;gap:14px;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:16px;padding:16px 20px;margin-bottom:20px;transition:all .4s}
-.modebar.fast{background:#fff5f5;border-color:#ff3b30;box-shadow:0 0 16px rgba(255,59,48,.1)}
-.modebar .mode-icon{font-size:28px;flex-shrink:0}
-.modebar .mode-text{flex:1}
-.modebar .mode-title{font-size:16px;font-weight:700;color:#1d1d1f}
-.modebar.fast .mode-title{color:#ff3b30}
-.modebar .mode-desc{font-size:13px;color:#86868b;margin-top:4px}
-.modebar.fast .mode-desc{color:#ff3b30}
-.modebar .mode-badge{display:inline-block;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:700;background:#e8e8ed;color:#1d1d1f}
-.modebar.fast .mode-badge{background:#ff3b30;color:#fff;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
-.toggle{display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0}
-.toggle input{display:none}
-.toggle .track{width:44px;height:24px;background:#d2d2d7;border-radius:99px;position:relative;transition:background .3s}
-.toggle input:checked+.track{background:#ff3b30}
-.toggle .track::after{content:'';position:absolute;top:3px;left:3px;width:18px;height:18px;background:#fff;border-radius:50%;transition:transform .3s;box-shadow:0 1px 3px rgba(0,0,0,.12)}
-.toggle input:checked+.track::after{transform:translateX(20px)}
+[data-theme="dark"] {
+  --glass-bg: rgba(40, 40, 42, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --bg-primary: #000000;
+  --bg-secondary: #1c1c1e;
+  --text-primary: #f5f5f7;
+  --text-secondary: #aeaeb2;
+  --text-tertiary: #8e8e93;
+  --accent-blue: #0a84ff;
+  --accent-green: #30d158;
+  --accent-red: #ff453a;
+  --accent-orange: #ff9f0a;
+  --accent-purple: #bf5af2;
+  --input-bg: rgba(58, 58, 60, 0.8);
+  --input-border: rgba(255, 255, 255, 0.12);
+  --divider: rgba(255, 255, 255, 0.08);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --log-bg: rgba(58, 58, 60, 0.8);
+  --orb-1: rgba(10, 132, 255, 0.18);
+  --orb-2: rgba(191, 90, 242, 0.15);
+  --orb-3: rgba(48, 209, 88, 0.12);
+  --btn-secondary-bg: rgba(120, 120, 128, 0.2);
+}
 
-.grid{display:grid;grid-template-columns:460px 1fr;gap:20px}
-.card{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:16px;padding:20px 22px;margin-bottom:14px;box-shadow:0 1px 4px rgba(0,0,0,.04)}
-h2{font-size:19px;font-weight:700;margin-bottom:12px}
-label{display:block;margin:12px 0 6px;color:#6e6e73;font-size:14px;font-weight:600}
-input,textarea,select{width:100%;background:#fff;color:#1d1d1f;border:1.5px solid #d2d2d7;border-radius:10px;padding:11px 14px;font-size:15px;font-family:inherit;outline:none;transition:border .2s}
-input:focus,textarea:focus,select:focus{border-color:#0071e3}
-textarea{height:180px;font-family:Consolas,monospace;font-size:14px;resize:vertical}
-.btn{border:0;border-radius:10px;padding:11px 16px;font-weight:700;cursor:pointer;margin-top:12px;font-size:14px;font-family:inherit;transition:all .2s}
-.btn:hover{opacity:.85}
-.btn-p{background:#0071e3;color:#fff}.btn-g{background:#34c759;color:#fff}.btn-o{background:#e8e8ed;color:#1d1d1f}.btn-r{background:#ff3b30;color:#fff}.btn-w{background:#f59e0b;color:#fff}
-.btn-sm{padding:6px 12px;font-size:13px}
-.row{display:flex;gap:10px;margin-top:10px}.row .btn{flex:1}
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
 
-.lib-list{display:grid;gap:10px}
-.lib-item{background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:14px;padding:14px 18px}
-.lib-name{font-size:16px;font-weight:700}
-.lib-meta{color:#86868b;font-size:13px;margin:4px 0 8px}
-.lib-actions{display:flex;gap:8px;flex-wrap:wrap}
-.lib-tree{display:none;margin-top:10px;padding-top:10px;border-top:1px solid #e8e8ed;max-height:400px;overflow-y:auto}
-.lib-tree.open{display:block}
-.pill{display:inline-block;padding:3px 10px;border-radius:99px;font-size:13px;font-weight:600;margin-right:6px;color:#fff}
-.cat-head{display:flex;align-items:center;gap:10px;padding:10px 14px;background:#f9f9fb;border:1px solid #e8e8ed;border-radius:10px;margin-top:10px;cursor:pointer;user-select:none}
-.cat-head:hover{background:#f0f0f5}
-.cat-arrow{font-size:12px;transition:transform .2s;color:#86868b}
-.cat-arrow.open{transform:rotate(90deg)}
-.cat-body{display:none}.cat-body.open{display:block}
-.cat-count{color:#86868b;font-size:12px;margin-left:auto}
-.file-row{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:6px;cursor:default}.file-row:hover{background:#f5f5f7}
-.fname{flex:1;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.fsize{font-size:12px;color:#86868b;flex-shrink:0}
-.folder-head{display:flex;align-items:center;gap:8px;padding:5px 10px;border-radius:6px;cursor:pointer}.folder-head:hover{background:#f5f5f7}
-.folder-arrow{font-size:10px;color:#86868b;width:14px;text-align:center;transition:transform .18s}.folder-arrow.open{transform:rotate(90deg)}
-.folder-body{display:none}.folder-body.open{display:block}
-.log{white-space:pre-wrap;background:#f9f9fb;border:1px solid #e8e8ed;border-radius:12px;padding:14px 18px;height:260px;overflow:auto;font-family:Consolas,monospace;font-size:13px;line-height:1.6;color:#6e6e73}
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:200;align-items:center;justify-content:center}
-.modal-overlay.show{display:flex}
-.modal{background:#fff;border-radius:16px;padding:24px;width:440px;max-width:90vw;box-shadow:0 20px 60px rgba(0,0,0,.15)}
-.modal input,.modal select{font-size:16px;padding:12px 16px;margin-bottom:8px}
-.modal h3{font-size:18px;margin-bottom:12px}
-.input-hidden{display:none}
-@media(max-width:768px){.wrap{padding:12px}h1{font-size:22px}.sub{font-size:13px}.grid{grid-template-columns:1fr;gap:12px}.card{padding:14px 16px;border-radius:12px;margin-bottom:10px}.modebar{padding:12px 14px;flex-wrap:wrap;gap:8px}.modebar .mode-title{font-size:14px}.modebar .mode-desc{font-size:12px}h2{font-size:17px}input,textarea,select{padding:12px 14px;font-size:16px}textarea{height:140px}.btn{padding:12px 14px;font-size:15px;min-height:44px}.lib-item{padding:10px 14px}.lib-name{font-size:15px}.log{height:180px;font-size:12px}.modal{width:95vw;padding:16px}.row{flex-wrap:wrap}}@media(max-width:420px){.wrap{padding:8px}h1{font-size:20px}.grid{gap:8px}.card{padding:12px;border-radius:10px}.lib-actions .btn{font-size:12px;padding:8px 10px}.btn-sm{padding:6px 10px;font-size:12px}}
-</style></head><body>
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: hidden;
+  transition: background 0.5s ease, color 0.5s ease;
+}
+
+.bg-orbs {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(100px);
+  animation: float 25s ease-in-out infinite;
+}
+
+.orb-1 {
+  width: 500px;
+  height: 500px;
+  background: var(--orb-1);
+  top: -200px;
+  right: -100px;
+  animation-delay: 0s;
+}
+
+.orb-2 {
+  width: 400px;
+  height: 400px;
+  background: var(--orb-2);
+  bottom: -150px;
+  left: -100px;
+  animation-delay: -8s;
+}
+
+.orb-3 {
+  width: 350px;
+  height: 350px;
+  background: var(--orb-3);
+  top: 50%;
+  left: 40%;
+  animation-delay: -16s;
+}
+
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 30px) scale(0.95); }
+}
+
+.wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 28px 24px;
+  position: relative;
+  z-index: 1;
+}
+
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding: 14px 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow);
+}
+
+.nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.brand-icon svg {
+  width: 22px;
+  height: 22px;
+  color: white;
+}
+
+.brand-text h1 {
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.brand-text .subtitle {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  color: var(--text-primary);
+}
+
+.theme-toggle:hover {
+  background: var(--hover-bg);
+}
+
+.theme-toggle svg {
+  width: 18px;
+  height: 18px;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.theme-toggle:hover svg {
+  transform: rotate(180deg);
+}
+
+.mode-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow);
+  margin-bottom: 20px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mode-card.fast {
+  background: linear-gradient(135deg, rgba(255, 59, 48, 0.08), rgba(255, 149, 0, 0.08));
+  border-color: rgba(255, 59, 48, 0.25);
+}
+
+.mode-indicator {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.4s ease;
+}
+
+.mode-indicator.safe {
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--accent-green);
+}
+
+.mode-indicator.fast {
+  background: rgba(255, 59, 48, 0.15);
+  color: var(--accent-red);
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 59, 48, 0.3); }
+  50% { box-shadow: 0 0 16px 2px rgba(255, 59, 48, 0.15); }
+}
+
+.mode-indicator svg {
+  width: 22px;
+  height: 22px;
+}
+
+.mode-info {
+  flex: 1;
+}
+
+.mode-title {
+  font-size: 15px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 3px;
+}
+
+.mode-badge {
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.mode-badge.safe {
+  background: rgba(52, 199, 89, 0.15);
+  color: var(--accent-green);
+}
+
+.mode-badge.fast {
+  background: rgba(255, 59, 48, 0.15);
+  color: var(--accent-red);
+}
+
+.mode-desc {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+}
+
+.vp-toggle {
+  position: relative;
+  width: 51px;
+  height: 31px;
+  flex-shrink: 0;
+}
+
+.vp-toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.vp-toggle-slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(120, 120, 128, 0.32);
+  border-radius: 31px;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.vp-toggle-slider::before {
+  position: absolute;
+  content: "";
+  height: 27px;
+  width: 27px;
+  left: 2px;
+  bottom: 2px;
+  background: white;
+  border-radius: 50%;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+}
+
+.vp-toggle input:checked + .vp-toggle-slider {
+  background: linear-gradient(135deg, var(--accent-red), var(--accent-orange));
+}
+
+.vp-toggle input:checked + .vp-toggle-slider::before {
+  transform: translateX(20px);
+}
+
+.content-grid {
+  display: grid;
+  grid-template-columns: 460px 1fr;
+  gap: 20px;
+}
+
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 20px;
+  box-shadow: var(--glass-shadow);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--divider);
+}
+
+.card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.card-icon.blue { background: rgba(0, 113, 227, 0.12); color: var(--accent-blue); }
+.card-icon.green { background: rgba(52, 199, 89, 0.12); color: var(--accent-green); }
+.card-icon.purple { background: rgba(175, 82, 222, 0.12); color: var(--accent-purple); }
+.card-icon.orange { background: rgba(255, 149, 0, 0.12); color: var(--accent-orange); }
+
+.card-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.card-title {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.form-group {
+  margin-bottom: 14px;
+}
+
+.form-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  padding-left: 2px;
+}
+
+.vp-input, .vp-textarea, .vp-select {
+  width: 100%;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  -webkit-appearance: none;
+}
+
+.vp-input:focus, .vp-textarea:focus, .vp-select:focus {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.12);
+}
+
+.vp-textarea {
+  min-height: 160px;
+  font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  resize: vertical;
+}
+
+.vp-select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 40px;
+}
+
+.btn-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.vp-btn {
+  border: none;
+  border-radius: 12px;
+  padding: 12px 18px;
+  font-weight: 500;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  letter-spacing: -0.01em;
+}
+
+.vp-btn:hover {
+  transform: translateY(-1px);
+}
+
+.vp-btn:active {
+  transform: translateY(0);
+  opacity: 0.9;
+}
+
+.vp-btn.primary {
+  background: var(--accent-blue);
+  color: white;
+}
+
+.vp-btn.primary:hover {
+  background: #0077ed;
+}
+
+.vp-btn.success {
+  background: var(--accent-green);
+  color: white;
+  width: 100%;
+}
+
+.vp-btn.success:hover {
+  background: #2db84e;
+}
+
+.vp-btn.secondary {
+  background: var(--btn-secondary-bg);
+  color: var(--text-secondary);
+}
+
+.vp-btn.secondary:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.vp-btn.danger {
+  background: var(--accent-red);
+  color: white;
+}
+
+.vp-btn.warning {
+  background: var(--accent-orange);
+  color: white;
+}
+
+.vp-btn.sm {
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: 10px;
+  height: 34px;
+}
+
+.vp-btn.full {
+  flex: 1;
+}
+
+.lib-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.lib-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.lib-item {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 16px;
+  padding: 16px;
+  transition: all 0.2s ease;
+}
+
+.lib-item:hover {
+  background: var(--hover-bg);
+}
+
+.lib-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.lib-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.lib-name {
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.category-tag {
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: white;
+}
+
+.cat-movie { background: #af52de; }
+.cat-tv { background: #007aff; }
+.cat-anime { background: #ff2d55; }
+.cat-doc { background: #34c759; }
+.cat-show { background: #ff9500; }
+.cat-other { background: #8e8e93; }
+
+.lib-meta {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+
+.lib-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lib-meta svg {
+  width: 12px;
+  height: 12px;
+  opacity: 0.7;
+}
+
+.lib-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.lib-tree {
+  display: none;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid var(--divider);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.lib-tree.open {
+  display: block;
+}
+
+.lib-tree::-webkit-scrollbar {
+  width: 5px;
+}
+
+.lib-tree::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.lib-tree::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
+.category-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--btn-secondary-bg);
+  border-radius: 10px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.category-header:hover {
+  background: var(--hover-bg);
+}
+
+.chevron {
+  width: 14px;
+  height: 14px;
+  color: var(--text-tertiary);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.chevron.open {
+  transform: rotate(90deg);
+}
+
+.category-count {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+.category-body {
+  display: none;
+  padding-left: 4px;
+}
+
+.category-body.open {
+  display: block;
+}
+
+.folder-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.folder-header:hover {
+  background: var(--hover-bg);
+}
+
+.folder-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--accent-blue);
+  flex-shrink: 0;
+}
+
+.folder-name {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.folder-count {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-left: auto;
+}
+
+.delete-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--accent-red);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.folder-header:hover .delete-btn,
+.file-row:hover .delete-btn {
+  opacity: 1;
+}
+
+.delete-btn:hover {
+  background: rgba(255, 59, 48, 0.1);
+}
+
+.folder-body {
+  display: none;
+  padding-left: 18px;
+}
+
+.folder-body.open {
+  display: block;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.file-row:hover {
+  background: var(--hover-bg);
+}
+
+.file-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--accent-purple);
+  flex-shrink: 0;
+}
+
+.file-name {
+  flex: 1;
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-size {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.log-container {
+  background: var(--log-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 14px;
+  padding: 14px;
+  height: 240px;
+  overflow-y: auto;
+  font-family: "SF Mono", "JetBrains Mono", Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.log-container::-webkit-scrollbar {
+  width: 5px;
+}
+
+.log-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.log-container::-webkit-scrollbar-thumb {
+  background: var(--text-tertiary);
+  border-radius: 3px;
+  opacity: 0.5;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--text-tertiary);
+}
+
+.empty-icon {
+  width: 60px;
+  height: 60px;
+  margin: 0 auto 14px;
+  background: var(--btn-secondary-bg);
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+}
+
+.empty-icon svg {
+  width: 28px;
+  height: 28px;
+}
+
+.empty-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  color: var(--text-secondary);
+}
+
+.empty-desc {
+  font-size: 12px;
+}
+
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.modal-overlay.show {
+  display: flex;
+  opacity: 1;
+}
+
+.vp-modal {
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 24px;
+  padding: 24px;
+  width: 420px;
+  max-width: 92vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-overlay.show .vp-modal {
+  transform: scale(1) translateY(0);
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.modal-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  background: rgba(0, 113, 227, 0.12);
+  color: var(--accent-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.modal-desc {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 18px;
+  justify-content: flex-end;
+}
+
+.hidden-input {
+  display: none;
+}
+
+.loading-spinner {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--divider);
+  border-top-color: var(--accent-blue);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 900px) {
+  .wrap {
+    padding: 16px 12px;
+  }
+  
+  .top-nav {
+    padding: 12px 16px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .brand-text h1 {
+    font-size: 17px;
+  }
+  
+  .brand-text .subtitle {
+    display: none;
+  }
+  
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .glass-card {
+    padding: 16px;
+    border-radius: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .mode-card {
+    padding: 14px 16px;
+    border-radius: 16px;
+    gap: 12px;
+  }
+  
+  .mode-indicator {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+  }
+  
+  .mode-title {
+    font-size: 14px;
+  }
+  
+  .mode-desc {
+    font-size: 11px;
+  }
+  
+  .vp-btn {
+    padding: 12px 16px;
+    font-size: 15px;
+    min-height: 46px;
+  }
+  
+  .vp-input, .vp-textarea, .vp-select {
+    padding: 12px;
+    font-size: 16px;
+  }
+  
+  .vp-textarea {
+    min-height: 120px;
+  }
+  
+  .log-container {
+    height: 180px;
+  }
+  
+  .vp-modal {
+    padding: 20px;
+    border-radius: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .wrap {
+    padding: 12px 8px;
+  }
+  
+  .glass-card {
+    padding: 14px;
+    border-radius: 14px;
+  }
+  
+  .lib-actions .vp-btn.sm {
+    font-size: 11px;
+    padding: 7px 10px;
+  }
+}
+</style>
+</head>
+<body>
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+  <div class="orb orb-3"></div>
+</div>
+
 <div class="wrap">
-<h1>123 秒传 → STRM</h1>
-<div class="sub">NAS Docker 一体版 · 持久化保存秒传库 · 直接生成 STRM · 播放时自动秒传并 302 到真实直链</div>
-
-<div class="modebar" id="modebar">
-  <span class="mode-icon" id="modeIcon">🛡️</span>
-  <div class="mode-text">
-    <div class="mode-title" id="modeTitle">缓存模式</div>
-    <div class="mode-desc" id="modeDesc">文件保存 24 小时后自动清理，适合反复播放</div>
-  </div>
-  <span class="mode-badge" id="modeBadge">安全</span>
-  <label class="toggle"><input id="fastMode" type="checkbox"><span class="track"></span></label>
-</div>
-
-<div class="grid">
-  <div>
-    <div class="card"><h2>1. 保存秒传 JSON</h2>
-      <label>库名称</label><input id="libName" placeholder="例如：全职猎人 2011">
-      <label>分类</label><select id="libCat"><option value="">未分类</option><option value="电影">电影</option><option value="剧集">剧集</option><option value="动漫">动漫</option><option value="纪录片">纪录片</option><option value="综艺">综艺</option></select>
-      <label>JSON 内容（可拖拽 .json 文件到文本框）</label>
-      <textarea id="content" placeholder='粘贴 {"files":[{"etag":"...","size":"...","path":"xxx.mkv"}]}'></textarea>
-      <div class="row">
-        <button class="btn btn-o" onclick="document.getElementById('fileInput').click()">选择 JSON 文件</button>
-        <button class="btn btn-p" onclick="saveLib()">保存到库</button>
+  <nav class="top-nav">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7 10 12 15 17 10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
       </div>
-      <input type="file" id="fileInput" accept=".json,application/json" class="input-hidden">
+      <div class="brand-text">
+        <h1>123 秒传 STRM</h1>
+        <div class="subtitle">NAS Docker</div>
+      </div>
     </div>
-    <div class="card"><h2>2. 基础设置</h2>
-      <label>123 账号</label><input id="panUser">
-      <label>123 密码</label><input id="panPass" type="password">
-      <label>STRM 输出目录</label><input id="outDir">
-      <label>服务地址</label><input id="srvBase">
-      <button class="btn btn-g" onclick="saveCfg()" style="width:100%">保存基础设置</button>
+    <div class="nav-actions">
+      <button class="theme-toggle" id="themeToggle" title="切换主题">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"/>
+          <line x1="12" y1="1" x2="12" y2="3"/>
+          <line x1="12" y1="21" x2="12" y2="23"/>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+          <line x1="1" y1="12" x2="3" y2="12"/>
+          <line x1="21" y1="12" x2="23" y2="12"/>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+        </svg>
+      </button>
     </div>
+  </nav>
+
+  <div class="mode-card" id="modebar">
+    <div class="mode-indicator safe" id="modeIndicator">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      </svg>
+    </div>
+    <div class="mode-info">
+      <div class="mode-title">
+        <span id="modeTitle">缓存模式</span>
+        <span class="mode-badge safe" id="modeBadge">安全</span>
+      </div>
+      <div class="mode-desc" id="modeDesc">文件保存 24 小时后自动清理，适合反复播放</div>
+    </div>
+    <label class="vp-toggle">
+      <input id="fastMode" type="checkbox">
+      <span class="vp-toggle-slider"></span>
+    </label>
   </div>
 
-  <div>
-    <div class="card"><h2>已保存的秒传库</h2>
-      <div class="row"><button class="btn btn-o btn-sm" onclick="exportBackup()">导出备份</button><button class="btn btn-w btn-sm" onclick="document.getElementById('restoreInput').click()">导入恢复</button></div>
-      <input type="file" id="restoreInput" accept=".json" class="input-hidden">
-      <div id="libList" class="lib-list"></div>
+  <div class="content-grid">
+    <div class="left-column">
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-icon blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+          </div>
+          <h2 class="card-title">保存秒传 JSON</h2>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">库名称</label>
+          <input type="text" class="vp-input" id="libName" placeholder="例如：全职猎人 2011">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">分类</label>
+          <select class="vp-select" id="libCat">
+            <option value="">未分类</option>
+            <option value="电影">电影</option>
+            <option value="剧集">剧集</option>
+            <option value="动漫">动漫</option>
+            <option value="纪录片">纪录片</option>
+            <option value="综艺">综艺</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">JSON 内容（可拖拽 .json 文件到文本框）</label>
+          <textarea class="vp-textarea" id="content" placeholder='粘贴 {"files":[{"etag":"...","size":"...","path":"xxx.mkv"}]'></textarea>
+        </div>
+        
+        <div class="btn-group">
+          <button class="vp-btn secondary full" onclick="document.getElementById('fileInput').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+              <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+              <polyline points="13 2 13 9 20 9"/>
+            </svg>
+            选择文件
+          </button>
+          <button class="vp-btn primary full" onclick="saveLib()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
+              <polyline points="17 21 17 13 7 13 7 21"/>
+              <polyline points="7 3 7 8 15 8"/>
+            </svg>
+            保存到库
+          </button>
+        </div>
+        <input type="file" id="fileInput" accept=".json,application/json" class="hidden-input">
+      </div>
+
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-icon green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"/>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+          </div>
+          <h2 class="card-title">基础设置</h2>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">123 账号</label>
+          <input type="text" class="vp-input" id="panUser" placeholder="输入手机号/邮箱">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">123 密码</label>
+          <input type="password" class="vp-input" id="panPass" placeholder="输入密码">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">STRM 输出目录</label>
+          <input type="text" class="vp-input" id="outDir" placeholder="/mnt/media">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">服务地址</label>
+          <input type="text" class="vp-input" id="srvBase" placeholder="http://localhost:8080">
+        </div>
+        
+        <button class="vp-btn success" onclick="saveCfg()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          保存基础设置
+        </button>
+      </div>
     </div>
-    <div class="card"><h2>日志</h2><div id="log" class="log"></div></div>
+
+    <div class="right-column">
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-icon purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+            </svg>
+          </div>
+          <h2 class="card-title">已保存的秒传库</h2>
+        </div>
+        
+        <div class="lib-toolbar">
+          <button class="vp-btn secondary sm" onclick="exportBackup()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="7 10 12 15 17 10"/>
+              <line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            导出备份
+          </button>
+          <button class="vp-btn warning sm" onclick="document.getElementById('restoreInput').click()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+              <polyline points="17 8 12 3 7 8"/>
+              <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            导入恢复
+          </button>
+        </div>
+        <input type="file" id="restoreInput" accept=".json" class="hidden-input">
+        
+        <div id="libList" class="lib-list">
+          <div class="empty-state">
+            <div class="empty-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              </svg>
+            </div>
+            <div class="empty-title">暂无秒传库</div>
+            <div class="empty-desc">添加 JSON 文件开始使用</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-icon orange">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10 9 9 9 8 9"/>
+            </svg>
+          </div>
+          <h2 class="card-title">运行日志</h2>
+        </div>
+        <div id="log" class="log-container"></div>
+      </div>
+    </div>
   </div>
-</div>
 </div>
 
 <div class="modal-overlay" id="renameDlg">
-  <div class="modal"><h3>重命名秒传库</h3>
-    <input id="renameInput">
-    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-      <button class="btn btn-o btn-sm" onclick="closeRename()">取消</button>
-      <button class="btn btn-p btn-sm" onclick="doRename()">确定</button>
+  <div class="vp-modal">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </div>
+      <h3 class="modal-title">重命名秒传库</h3>
+    </div>
+    <input type="text" class="vp-input" id="renameInput" placeholder="输入新名称">
+    <div class="modal-actions">
+      <button class="vp-btn secondary sm" onclick="closeRename()">取消</button>
+      <button class="vp-btn primary sm" onclick="doRename()">确定</button>
     </div>
   </div>
 </div>
 
 <div class="modal-overlay" id="mergeDlg">
-  <div class="modal"><h3>合并 / 改分类</h3>
-    <p style="font-size:14px;color:#6e6e73;margin-bottom:12px">此操作保留文件索引不变，已生成的 STRM 可继续使用</p>
-    <label>目标分类</label><select id="mergeCat"><option value="">未分类</option><option value="电影">电影</option><option value="剧集">剧集</option><option value="动漫">动漫</option><option value="纪录片">纪录片</option><option value="综艺">综艺</option></select>
-    <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
-      <button class="btn btn-o btn-sm" onclick="closeMerge()">取消</button>
-      <button class="btn btn-p btn-sm" onclick="doMerge()">确认</button>
+  <div class="vp-modal">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="16 3 21 3 21 8"/>
+          <line x1="4" y1="20" x2="21" y2="3"/>
+          <polyline points="21 16 21 21 16 21"/>
+          <line x1="15" y1="15" x2="21" y2="21"/>
+          <line x1="4" y1="4" x2="9" y2="9"/>
+        </svg>
+      </div>
+      <h3 class="modal-title">合并 / 改分类</h3>
+    </div>
+    <p class="modal-desc">此操作保留文件索引不变，已生成的 STRM 可继续使用</p>
+    <div class="form-group">
+      <label class="form-label">目标分类</label>
+      <select class="vp-select" id="mergeCat">
+        <option value="">未分类</option>
+        <option value="电影">电影</option>
+        <option value="剧集">剧集</option>
+        <option value="动漫">动漫</option>
+        <option value="纪录片">纪录片</option>
+        <option value="综艺">综艺</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="vp-btn secondary sm" onclick="closeMerge()">取消</button>
+      <button class="vp-btn primary sm" onclick="doMerge()">确认</button>
     </div>
   </div>
 </div>
 
 <script>
-var API=window.location.origin,libCache={},renameLibId=null,mergeLibId=null;
-function log(s){var el=document.getElementById('log');el.textContent+=s+'\n';el.scrollTop=el.scrollHeight}
-async function api(u,opt){var r=await fetch(API+u,opt);var j=await r.json();if(!r.ok||j.ok===false)throw new Error(j.error||j.detail||r.status);return j}
-function fmtSize(s){s=parseInt(s)||0;if(s<1024)return s+' B';if(s<1048576)return(s/1024).toFixed(1)+' KB';if(s<1073741824)return(s/1048576).toFixed(1)+' MB';return(s/1073741824).toFixed(2)+' GB';}
-var catColors={电影:'#a855f7',剧集:'#3b82f6',动漫:'#ec4899',纪录片:'#22c55e',综艺:'#f59e0b','':'#6b7280'};
-var catOrder=['电影','剧集','动漫','纪录片','综艺',''];
-var catNames={电影:'电影',剧集:'剧集',动漫:'动漫',纪录片:'纪录片',综艺:'综艺','':'未分类'};
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+var API = window.location.origin;
+var libCache = {};
+var renameLibId = null;
+var mergeLibId = null;
 
-// ====== MODE ======
-function applyModeUI(f){var bar=document.getElementById('modebar'),icon=document.getElementById('modeIcon'),title=document.getElementById('modeTitle'),desc=document.getElementById('modeDesc'),badge=document.getElementById('modeBadge');document.getElementById('fastMode').checked=f;if(f){bar.classList.add('fast');icon.textContent='⚠️';title.textContent='入库模式';desc.textContent='获取直链后 1 分钟即删除，播放完即清理';badge.textContent='即时清理';badge.style.background='#ff3b30';badge.style.color='#fff'}else{bar.classList.remove('fast');icon.textContent='🛡️';title.textContent='缓存模式';desc.textContent='文件保存 24 小时后自动清理，适合反复播放';badge.textContent='安全';badge.style.background='#e8e8ed';badge.style.color='#1d1d1f'}}
-async function loadMode(){var j=await api('/api/mode');applyModeUI(j.mode==='fast');}
-document.getElementById('fastMode').addEventListener('change',function(){var f=this.checked;applyModeUI(f);api('/api/mode',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({mode:f?'fast':'cache'})}).then(function(j){log('已切换：'+j.label);});});
+function initTheme() {
+  const savedTheme = localStorage.getItem('vp-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  updateThemeIcon(savedTheme);
+}
 
-// ====== CONFIG ======
-async function loadCfg(){var c=await api('/api/config');document.getElementById('outDir').value=c.output_dir||'';document.getElementById('srvBase').value=c.server_base||'';document.getElementById('panUser').value=c.pan_username||'';document.getElementById('panPass').value=c.pan_password||'';}
-async function saveCfg(){var o=document.getElementById('outDir').value,s=document.getElementById('srvBase').value,u=document.getElementById('panUser').value,p=document.getElementById('panPass').value;await api('/api/config',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({output_dir:o,server_base:s,pan_username:u,pan_password:p})});log('√ 设置已保存');}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const newTheme = current === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', newTheme);
+  localStorage.setItem('vp-theme', newTheme);
+  updateThemeIcon(newTheme);
+}
 
-// ====== SAVE LIB ======
-async function saveLib(){try{var raw=JSON.parse(document.getElementById('content').value);var name=document.getElementById('libName').value,cat=document.getElementById('libCat').value;var j=await api('/api/libraries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name,content:raw,category:cat})});log('√ 保存成功：'+j.id+'（'+j.files+' 个文件）');document.getElementById('content').value='';document.getElementById('libName').value='';loadLibs();}catch(e){alert(e.message);}}
-document.getElementById('fileInput').onchange=async function(){var f=this.files[0];if(!f)return;var n=document.getElementById('libName');n.value=n.value||f.name.replace(/\.json$/,'');document.getElementById('content').value=await f.text();};
-document.getElementById('content').addEventListener('dragover',function(e){e.preventDefault();});
-document.getElementById('content').addEventListener('drop',async function(e){e.preventDefault();var f=e.dataTransfer.files[0];if(!f)return;var n=document.getElementById('libName');n.value=n.value||f.name.replace(/\.json$/,'');this.value=await f.text();});
+function updateThemeIcon(theme) {
+  const btn = document.getElementById('themeToggle');
+  if (theme === 'dark') {
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>`;
+  } else {
+    btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="5"/>
+      <line x1="12" y1="1" x2="12" y2="3"/>
+      <line x1="12" y1="21" x2="12" y2="23"/>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+      <line x1="1" y1="12" x2="3" y2="12"/>
+      <line x1="21" y1="12" x2="23" y2="12"/>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+    </svg>`;
+  }
+}
 
-// ====== LIBS ======
-function _itemHtml(x){var cat=x.category||'';var tag=cat?'<span class="pill" style="background:'+(catColors[cat]||'#6b7280')+'">'+esc(cat)+'</span> ':'';return'<div class="lib-item"><div class="lib-name">'+tag+esc(x.name)+'</div><div class="lib-meta">视频 '+x.video+' · 总 '+x.total+' · id: '+esc(x.id)+'</div><div class="lib-actions"><button class="btn btn-p btn-sm" onclick="genSTRM(\''+esc(x.id)+'\')">生成 STRM</button><button class="btn btn-o btn-sm" onclick="toggleLib(\''+esc(x.id)+'\',this)">展开文件</button><button class="btn btn-o btn-sm" onclick="askRename(\''+esc(x.id)+'\',\''+esc(x.name)+'\')">重命名</button><button class="btn btn-o btn-sm" onclick="askMerge(\''+esc(x.id)+'\',\''+esc(cat)+'\')">改分类</button><button class="btn btn-r btn-sm" onclick="delLib(\''+esc(x.id)+'\')">删除</button></div><div class="lib-tree" id="tree_'+esc(x.id)+'"></div></div>';}
+document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+initTheme();
 
-async function loadLibs(){var j=await api('/api/libraries');var items=j.items||[];var el=document.getElementById('libList');if(!items.length){el.innerHTML='<div style="color:#86868b;font-size:14px;padding:8px">暂无秒传库</div>';return;}
-var groups={};catOrder.forEach(function(c){groups[c]=[];});
-items.forEach(function(x){var cat=x.category||'';if(!groups[cat])groups[cat]=[];groups[cat].push(x);});
-var h='';catOrder.forEach(function(cat){var g=groups[cat];if(!g||g.length===0)return;
-  h+='<div class="cat-head" onclick="var a=this.querySelector(\'.cat-arrow\');var b=this.nextElementSibling;a.classList.toggle(\'open\');b.classList.toggle(\'open\')"><span class="cat-arrow open">▶</span><span class="pill" style="background:'+(catColors[cat]||'#6b7280')+'">'+(catNames[cat]||cat||'未分类')+'</span><span class="cat-count">('+g.length+')</span>'+(g.length>1?'<button class="btn btn-w btn-sm" style="margin-left:8px" onclick="event.stopPropagation();mergeCat(\''+esc(cat)+'\')">合并此分类</button>':'')+'</div><div class="cat-body open">'+g.map(_itemHtml).join('')+'</div>';
-});el.innerHTML=h||'<div style="color:#86868b;font-size:14px;padding:8px">暂无秒传库</div>';}
+function log(s) {
+  var el = document.getElementById('log');
+  el.textContent += s + '\n';
+  el.scrollTop = el.scrollHeight;
+}
 
-// ====== TREE ======
-function buildFolders(files){var folders={};var keys=Object.keys(files);for(var i=0;i<keys.length;i++){var parts=keys[i].replace(/\\/g,'/').split('/');var dir=parts.slice(0,-1).join('/');if(!folders[dir])folders[dir]={children:[]};folders[dir].children.push(keys[i]);for(var j=parts.length-2;j>=1;j--){var pd=parts.slice(0,j).join('/');if(!folders[pd])folders[pd]={children:[]};}}return folders;}
-function countDesc(folders,dir){var t=0,c=folders[dir];if(c)t=c.children.length;for(var d in folders){if(d===dir||d==='')continue;if(d.indexOf(dir+'/')===0)t+=countDesc(folders,d);}return t;}
-function filesUnder(folders,dir){var a=[],c=folders[dir];if(c)a=a.concat(c.children);for(var d in folders){if(d===dir||d==='')continue;if(d.indexOf(dir+'/')===0)a=a.concat(filesUnder(folders,d));}return a;}
+async function api(u, opt) {
+  var r = await fetch(API + u, opt);
+  var j = await r.json();
+  if (!r.ok || j.ok === false) throw new Error(j.error || j.detail || r.status);
+  return j;
+}
 
-function renderTree(folders,files,libId){var dirs=Object.keys(folders).sort(function(a,b){var da=(a.match(/\//g)||[]).length,db=(b.match(/\//g)||[]).length;return da!==db?da-db:a.localeCompare(b);});var h='',top=[];for(var i=0;i<dirs.length;i++){if(dirs[i]==='')continue;var ls=dirs[i].lastIndexOf('/'),pd=ls>=0?dirs[i].substring(0,ls):null;if(!pd||!folders[pd])top.push(dirs[i]);}for(var t=0;t<top.length;t++)h+=renderDir(top[t],0,folders,files,libId);return h||'<div style="font-size:12px;color:#86868b">无文件</div>';}
-function renderDir(dir,depth,folders,files,libId){var ch=folders[dir]?folders[dir].children||[]:[];var name=dir.split('/').pop()||dir,pl=dir.split('/').length;var dfs=[];for(var i=0;i<ch.length;i++){if(ch[i].replace(/\\/g,'/').split('/').length===pl+1)dfs.push(ch[i]);}var sds=[];for(var d in folders){if(d===dir||d==='')continue;if(d.split('/').length===pl+1&&d.indexOf(dir+'/')===0)sds.push(d);}dfs.sort();sds.sort();var pad=depth*16;var cnt=countDesc(folders,dir);var h='<div><div class="folder-head" style="padding-left:'+pad+'px" onclick="var a=this.querySelector(\'.folder-arrow\');var b=this.parentElement.querySelector(\'.folder-body\');a.classList.toggle(\'open\');b.classList.toggle(\'open\')"><span class="folder-arrow">▶</span><span>📁</span><span style="font-size:13px;font-weight:600">'+esc(name)+'</span><span style="font-size:11px;color:#86868b;margin-left:auto">'+cnt+'</span><span style="cursor:pointer;color:#ff3b30;font-size:11px;padding:0 3px;margin-left:4px" title="删除文件夹" onclick="event.stopPropagation();removeFolder(\''+esc(libId)+'\',\''+esc(dir)+'\',this)">✕</span></div><div class="folder-body">';for(var f=0;f<dfs.length;f++)h+=renderFile(dfs[f],depth+1,files,libId);for(var s=0;s<sds.length;s++)h+=renderDir(sds[s],depth+1,folders,files,libId);h+='</div></div>';return h;}
-function renderFile(fp,depth,files,libId){var info=files[fp];if(!info)return'';var pad=depth*16;return'<div class="file-row" style="padding-left:'+pad+'px"><span style="font-size:13px">🎬</span><span class="fname" title="'+esc(info.name)+'">'+esc(info.name)+'</span><span class="fsize">'+fmtSize(info.size)+'</span><span style="cursor:pointer;color:#ff3b30;font-size:11px;padding:0 3px" title="删除" onclick="removeFile(\''+esc(libId)+'\',\''+esc(fp)+'\',this)">✕</span></div>';}
+function fmtSize(s) {
+  s = parseInt(s) || 0;
+  if (s < 1024) return s + ' B';
+  if (s < 1048576) return (s / 1024).toFixed(1) + ' KB';
+  if (s < 1073741824) return (s / 1048576).toFixed(1) + ' MB';
+  return (s / 1073741824).toFixed(2) + ' GB';
+}
 
-async function toggleLib(id,btn){var tree=document.getElementById('tree_'+id);if(tree.classList.contains('open')){tree.classList.remove('open');btn.textContent='展开文件';return;}if(!libCache[id]){var lib=await api('/api/libraries/'+id);var fs={};for(var i=0;i<lib.files.length;i++){var f=lib.files[i];fs[f.path]={etag:f.etag||'',size:parseInt(f.size)||0,name:f.path.split('/').pop()};}libCache[id]={files:fs,folders:buildFolders(fs)};}tree.innerHTML=renderTree(libCache[id].folders,libCache[id].files,id);tree.classList.add('open');btn.textContent='收起文件';}
+var catClasses = {
+  '电影': 'cat-movie',
+  '剧集': 'cat-tv',
+  '动漫': 'cat-anime',
+  '纪录片': 'cat-doc',
+  '综艺': 'cat-show',
+  '': 'cat-other'
+};
 
-async function removeFile(libId,fp,el){if(!confirm('删除此文件？\n'+fp))return;try{delete libCache[libId];var lib=await api('/api/libraries/'+libId);var updated=[];for(var i=0;i<lib.files.length;i++){if(lib.files[i].path===fp)continue;updated.push({idx:updated.length,path:lib.files[i].path.replace(/\\/g,'/'),etag:lib.files[i].etag,size:lib.files[i].size});}await api('/api/libraries/'+libId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:updated})});log('已删除：'+fp);var tree=document.getElementById('tree_'+libId);tree.classList.remove('open');var b=tree.parentElement.querySelector('.btn-o.btn-sm');if(b&&b.textContent==='收起文件')b.textContent='展开文件';loadLibs();}catch(e){alert(e.message);}}
+var catOrder = ['电影', '剧集', '动漫', '纪录片', '综艺', ''];
+var catNames = { '电影': '电影', '剧集': '剧集', '动漫': '动漫', '纪录片': '纪录片', '综艺': '综艺', '': '未分类' };
 
-async function removeFolder(libId,dir,el){var all=filesUnder(libCache[libId].folders,dir);if(!all.length)return;if(!confirm('删除 '+all.length+' 个文件？\n'+dir))return;try{delete libCache[libId];var lib=await api('/api/libraries/'+libId);var keep=[];for(var i=0;i<lib.files.length;i++){if(all.indexOf(lib.files[i].path)===-1)keep.push({idx:keep.length,path:lib.files[i].path.replace(/\\/g,'/'),etag:lib.files[i].etag,size:lib.files[i].size});}await api('/api/libraries/'+libId,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({files:keep})});log('已删除文件夹：'+dir+' ('+all.length+' 个)');var tree=document.getElementById('tree_'+libId);tree.classList.remove('open');var b=tree.parentElement.querySelector('.btn-o.btn-sm');if(b&&b.textContent==='收起文件')b.textContent='展开文件';loadLibs();}catch(e){alert(e.message);}}
+function esc(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
 
-async function mergeCat(cat){var items=(await api('/api/libraries')).items||[];var ids=[];for(var i=0;i<items.length;i++){if((items[i].category||'')===cat)ids.push(items[i].id);}if(ids.length<2){alert('此分类只有一个库，无需合并');return;}if(!confirm('合并「'+cat+'」下的 '+ids.length+' 个库为 1 个？\n原库将被删除，已生成 STRM 不受影响'))return;try{var allFiles=[],names=[];for(var j=0;j<ids.length;j++){var lib=await api('/api/libraries/'+ids[j]);names.push(lib.name);for(var k=0;k<lib.files.length;k++){var f=lib.files[k];allFiles.push({etag:f.etag,size:String(f.size),path:f.path.replace(/\\/g,'/')});}}var mergedName=names.join(' + ').substring(0,80);for(var d=0;d<ids.length;d++){await api('/api/libraries/'+encodeURIComponent(ids[d]),{method:'DELETE'});}var newLib=await api('/api/libraries',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:mergedName,content:{files:allFiles},category:cat})});log('合并完成：'+ids.length+' 个库 → '+newLib.id+'（'+allFiles.length+' 个文件）');loadLibs();}catch(e){alert(e.message);}}
+function applyModeUI(f) {
+  var bar = document.getElementById('modebar');
+  var indicator = document.getElementById('modeIndicator');
+  var title = document.getElementById('modeTitle');
+  var desc = document.getElementById('modeDesc');
+  var badge = document.getElementById('modeBadge');
+  document.getElementById('fastMode').checked = f;
+  
+  if (f) {
+    bar.classList.add('fast');
+    indicator.classList.remove('safe');
+    indicator.classList.add('fast');
+    indicator.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>`;
+    title.textContent = '入库模式';
+    desc.textContent = '获取直链后 1 分钟即删除，播放完即清理';
+    badge.textContent = '即时清理';
+    badge.classList.remove('safe');
+    badge.classList.add('fast');
+  } else {
+    bar.classList.remove('fast');
+    indicator.classList.remove('fast');
+    indicator.classList.add('safe');
+    indicator.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>`;
+    title.textContent = '缓存模式';
+    desc.textContent = '文件保存 24 小时后自动清理，适合反复播放';
+    badge.textContent = '安全';
+    badge.classList.remove('fast');
+    badge.classList.add('safe');
+  }
+}
 
-async function genSTRM(id){try{var o=document.getElementById('outDir').value,s=document.getElementById('srvBase').value;var j=await api('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({lib_id:id,output_dir:o,server_base:s,include_subtitles:true})});log('√ 完成：'+j.count+' STRM'+(j.subtitles?', '+j.subtitles+' 字幕':'')+'\n输出：'+j.output_dir+'\n'+j.examples.slice(0,5).join('\n'));}catch(e){alert(e.message);}}
-async function delLib(id){if(!confirm('删除秒传库 '+id+' ？'))return;await api('/api/libraries/'+encodeURIComponent(id),{method:'DELETE'});loadLibs();}
+async function loadMode() {
+  try {
+    var j = await api('/api/mode');
+    applyModeUI(j.mode === 'fast');
+  } catch(e) {
+    applyModeUI(false);
+  }
+}
 
-// ====== RENAME ======
-function askRename(id,name){renameLibId=id;document.getElementById('renameInput').value=name;document.getElementById('renameDlg').classList.add('show');}
-function closeRename(){document.getElementById('renameDlg').classList.remove('show');renameLibId=null;}
-async function doRename(){var name=document.getElementById('renameInput').value.trim();if(!name||!renameLibId){closeRename();return;}await api('/api/libraries/'+encodeURIComponent(renameLibId),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:name})});closeRename();loadLibs();log('已重命名：'+name);}
+document.getElementById('fastMode').addEventListener('change', function() {
+  var f = this.checked;
+  applyModeUI(f);
+  api('/api/mode', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ mode: f ? 'fast' : 'cache' })
+  }).then(function(j) {
+    log('✓ 已切换：' + j.label);
+  }).catch(function(e) {
+    log('✗ 切换失败：' + e.message);
+  });
+});
 
-// ====== MERGE / CHANGE CATEGORY ======
-function askMerge(id,cat){mergeLibId=id;document.getElementById('mergeCat').value=cat||'';document.getElementById('mergeDlg').classList.add('show');}
-function closeMerge(){document.getElementById('mergeDlg').classList.remove('show');mergeLibId=null;}
-async function doMerge(){var cat=document.getElementById('mergeCat').value;if(!mergeLibId){closeMerge();return;}// 只改分类，保留 files 索引不变，已生成的 STRM 不受影响
-await api('/api/libraries/'+encodeURIComponent(mergeLibId),{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({category:cat})});closeMerge();loadLibs();log('已改分类为：'+(cat||'未分类')+'（文件索引保持不变）');}
+async function loadCfg() {
+  try {
+    var c = await api('/api/config');
+    document.getElementById('outDir').value = c.output_dir || '';
+    document.getElementById('srvBase').value = c.server_base || '';
+    document.getElementById('panUser').value = c.pan_username || '';
+    document.getElementById('panPass').value = c.pan_password || '';
+  } catch(e) {
+    log('配置加载中...');
+  }
+}
 
-// ====== BACKUP ======
-async function exportBackup(){var r=await fetch(API+'/api/backup');var blob=await r.blob();var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='123pan-strm-backup-'+Date.now()+'.json';a.click();log('√ 备份已下载');}
-document.getElementById('restoreInput').onchange=async function(){var f=this.files[0];if(!f)return;var fd=new FormData();fd.append('file',f);var r=await fetch(API+'/api/restore/upload',{method:'POST',body:fd});var j=await r.json();if(!j.ok){alert(j.error);return;}log('恢复完成：成功 '+j.restored+' 个，跳过 '+j.skipped+' 个');loadLibs();};
+async function saveCfg() {
+  var o = document.getElementById('outDir').value;
+  var s = document.getElementById('srvBase').value;
+  var u = document.getElementById('panUser').value;
+  var p = document.getElementById('panPass').value;
+  try {
+    await api('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ output_dir: o, server_base: s, pan_username: u, pan_password: p })
+    });
+    log('✓ 设置已保存');
+  } catch(e) {
+    alert(e.message);
+  }
+}
 
-loadMode();loadCfg();loadLibs();
-</script></body></html>
+async function saveLib() {
+  try {
+    var raw = JSON.parse(document.getElementById('content').value);
+    var name = document.getElementById('libName').value;
+    var cat = document.getElementById('libCat').value;
+    var j = await api('/api/libraries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: name, content: raw, category: cat })
+    });
+    log('✓ 保存成功：' + j.id + '（' + j.files + ' 个文件）');
+    document.getElementById('content').value = '';
+    document.getElementById('libName').value = '';
+    loadLibs();
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+document.getElementById('fileInput').onchange = async function() {
+  var f = this.files[0];
+  if (!f) return;
+  var n = document.getElementById('libName');
+  n.value = n.value || f.name.replace(/\.json$/, '');
+  document.getElementById('content').value = await f.text();
+};
+
+document.getElementById('content').addEventListener('dragover', function(e) {
+  e.preventDefault();
+});
+
+document.getElementById('content').addEventListener('drop', async function(e) {
+  e.preventDefault();
+  var f = e.dataTransfer.files[0];
+  if (!f) return;
+  var n = document.getElementById('libName');
+  n.value = n.value || f.name.replace(/\.json$/, '');
+  this.value = await f.text();
+});
+
+function _itemHtml(x) {
+  var cat = x.category || '';
+  var catClass = catClasses[cat] || 'cat-other';
+  var tag = cat ? '<span class="category-tag ' + catClass + '">' + esc(cat) + '</span>' : '';
+  return '<div class="lib-item">' +
+    '<div class="lib-header">' +
+      '<div class="lib-name-row">' + tag + '<span class="lib-name">' + esc(x.name) + '</span></div>' +
+    '</div>' +
+    '<div class="lib-meta">' +
+      '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg> 视频 ' + x.video + '</span>' +
+      '<span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> 总 ' + x.total + '</span>' +
+      '<span>ID: ' + esc(x.id) + '</span>' +
+    '</div>' +
+    '<div class="lib-actions">' +
+      '<button class="vp-btn primary sm" onclick="genSTRM(\'' + esc(x.id) + '\')">生成 STRM</button>' +
+      '<button class="vp-btn secondary sm" onclick="toggleLib(\'' + esc(x.id) + '\',this)">展开文件</button>' +
+      '<button class="vp-btn secondary sm" onclick="askRename(\'' + esc(x.id) + '\',\'' + esc(x.name) + '\')">重命名</button>' +
+      '<button class="vp-btn secondary sm" onclick="askMerge(\'' + esc(x.id) + '\',\'' + esc(cat) + '\')">改分类</button>' +
+      '<button class="vp-btn danger sm" onclick="delLib(\'' + esc(x.id) + '\')">删除</button>' +
+    '</div>' +
+    '<div class="lib-tree" id="tree_' + esc(x.id) + '"></div>' +
+  '</div>';
+}
+
+async function loadLibs() {
+  try {
+    var j = await api('/api/libraries');
+    var items = j.items || [];
+    var el = document.getElementById('libList');
+    
+    if (!items.length) {
+      el.innerHTML = '<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div><div class="empty-title">暂无秒传库</div><div class="empty-desc">添加 JSON 文件开始使用</div></div>';
+      return;
+    }
+    
+    var groups = {};
+    catOrder.forEach(function(c) { groups[c] = []; });
+    items.forEach(function(x) {
+      var cat = x.category || '';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(x);
+    });
+    
+    var h = '';
+    catOrder.forEach(function(cat) {
+      var g = groups[cat];
+      if (!g || g.length === 0) return;
+      var catClass = catClasses[cat] || 'cat-other';
+      h += '<div class="category-group">' +
+        '<div class="category-header" onclick="var a=this.querySelector(\'.chevron\');var b=this.nextElementSibling;a.classList.toggle(\'open\');b.classList.toggle(\'open\')">' +
+          '<svg class="chevron open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>' +
+          '<span class="category-tag ' + catClass + '">' + (catNames[cat] || cat || '未分类') + '</span>' +
+          '<span class="category-count">' + g.length + '</span>' +
+          (g.length > 1 ? '<button class="vp-btn warning sm" style="margin-left:8px;padding:5px 10px;font-size:11px;height:28px" onclick="event.stopPropagation();mergeCat(\'' + esc(cat) + '\')">合并</button>' : '') +
+        '</div>' +
+        '<div class="category-body open">' + g.map(_itemHtml).join('') + '</div>' +
+      '</div>';
+    });
+    
+    el.innerHTML = h || '<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div><div class="empty-title">暂无秒传库</div><div class="empty-desc">添加 JSON 文件开始使用</div></div>';
+  } catch(e) {
+    log('加载库列表失败：' + e.message);
+  }
+}
+
+function buildFolders(files) {
+  var folders = {};
+  var keys = Object.keys(files);
+  for (var i = 0; i < keys.length; i++) {
+    var parts = keys[i].replace(/\\/g, '/').split('/');
+    var dir = parts.slice(0, -1).join('/');
+    if (!folders[dir]) folders[dir] = { children: [] };
+    folders[dir].children.push(keys[i]);
+    for (var j = parts.length - 2; j >= 1; j--) {
+      var pd = parts.slice(0, j).join('/');
+      if (!folders[pd]) folders[pd] = { children: [] };
+    }
+  }
+  return folders;
+}
+
+function countDesc(folders, dir) {
+  var t = 0, c = folders[dir];
+  if (c) t = c.children.length;
+  for (var d in folders) {
+    if (d === dir || d === '') continue;
+    if (d.indexOf(dir + '/') === 0) t += countDesc(folders, d);
+  }
+  return t;
+}
+
+function filesUnder(folders, dir) {
+  var a = [], c = folders[dir];
+  if (c) a = a.concat(c.children);
+  for (var d in folders) {
+    if (d === dir || d === '') continue;
+    if (d.indexOf(dir + '/') === 0) a = a.concat(filesUnder(folders, d));
+  }
+  return a;
+}
+
+function renderTree(folders, files, libId) {
+  var dirs = Object.keys(folders).sort(function(a, b) {
+    var da = (a.match(/\//g) || []).length, db = (b.match(/\//g) || []).length;
+    return da !== db ? da - db : a.localeCompare(b);
+  });
+  var h = '', top = [];
+  for (var i = 0; i < dirs.length; i++) {
+    if (dirs[i] === '') continue;
+    var ls = dirs[i].lastIndexOf('/'), pd = ls >= 0 ? dirs[i].substring(0, ls) : null;
+    if (!pd || !folders[pd]) top.push(dirs[i]);
+  }
+  for (var t = 0; t < top.length; t++) h += renderDir(top[t], 0, folders, files, libId);
+  return h || '<div style="font-size:12px;color:var(--text-tertiary);padding:12px;text-align:center">无文件</div>';
+}
+
+function renderDir(dir, depth, folders, files, libId) {
+  var ch = folders[dir] ? folders[dir].children || [] : [];
+  var name = dir.split('/').pop() || dir, pl = dir.split('/').length;
+  var dfs = [];
+  for (var i = 0; i < ch.length; i++) {
+    if (ch[i].replace(/\\/g, '/').split('/').length === pl + 1) dfs.push(ch[i]);
+  }
+  var sds = [];
+  for (var d in folders) {
+    if (d === dir || d === '') continue;
+    if (d.split('/').length === pl + 1 && d.indexOf(dir + '/') === 0) sds.push(d);
+  }
+  dfs.sort(); sds.sort();
+  var pad = depth * 16;
+  var cnt = countDesc(folders, dir);
+  var h = '<div>' +
+    '<div class="folder-header" style="padding-left:' + pad + 'px" onclick="var a=this.querySelector(\'.chevron\');var b=this.parentElement.querySelector(\'.folder-body\');a.classList.toggle(\'open\');b.classList.toggle(\'open\')">' +
+      '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="9 18 15 12 9 6"/></svg>' +
+      '<svg class="folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' +
+      '<span class="folder-name">' + esc(name) + '</span>' +
+      '<span class="folder-count">' + cnt + '</span>' +
+      '<button class="delete-btn" title="删除文件夹" onclick="event.stopPropagation();removeFolder(\'' + esc(libId) + '\',\'' + esc(dir) + '\',this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
+    '</div>' +
+    '<div class="folder-body">';
+  for (var f = 0; f < dfs.length; f++) h += renderFile(dfs[f], depth + 1, files, libId);
+  for (var s = 0; s < sds.length; s++) h += renderDir(sds[s], depth + 1, folders, files, libId);
+  h += '</div></div>';
+  return h;
+}
+
+function renderFile(fp, depth, files, libId) {
+  var info = files[fp];
+  if (!info) return '';
+  var pad = depth * 16;
+  return '<div class="file-row" style="padding-left:' + pad + 'px">' +
+    '<svg class="file-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>' +
+    '<span class="file-name" title="' + esc(info.name) + '">' + esc(info.name) + '</span>' +
+    '<span class="file-size">' + fmtSize(info.size) + '</span>' +
+    '<button class="delete-btn" title="删除" onclick="removeFile(\'' + esc(libId) + '\',\'' + esc(fp) + '\',this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
+  '</div>';
+}
+
+async function toggleLib(id, btn) {
+  var tree = document.getElementById('tree_' + id);
+  if (tree.classList.contains('open')) {
+    tree.classList.remove('open');
+    btn.textContent = '展开文件';
+    return;
+  }
+  if (!libCache[id]) {
+    var lib = await api('/api/libraries/' + id);
+    var fs = {};
+    for (var i = 0; i < lib.files.length; i++) {
+      var f = lib.files[i];
+      fs[f.path] = { etag: f.etag || '', size: parseInt(f.size) || 0, name: f.path.split('/').pop() };
+    }
+    libCache[id] = { files: fs, folders: buildFolders(fs) };
+  }
+  tree.innerHTML = renderTree(libCache[id].folders, libCache[id].files, id);
+  tree.classList.add('open');
+  btn.textContent = '收起文件';
+}
+
+async function removeFile(libId, fp, el) {
+  if (!confirm('删除此文件？\n' + fp)) return;
+  try {
+    delete libCache[libId];
+    var lib = await api('/api/libraries/' + libId);
+    var updated = [];
+    for (var i = 0; i < lib.files.length; i++) {
+      if (lib.files[i].path === fp) continue;
+      updated.push({ idx: updated.length, path: lib.files[i].path.replace(/\\/g, '/'), etag: lib.files[i].etag, size: lib.files[i].size });
+    }
+    await api('/api/libraries/' + libId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: updated })
+    });
+    log('已删除：' + fp);
+    var tree = document.getElementById('tree_' + libId);
+    tree.classList.remove('open');
+    var b = tree.parentElement.querySelector('.vp-btn.secondary.sm');
+    if (b && b.textContent === '收起文件') b.textContent = '展开文件';
+    loadLibs();
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+async function removeFolder(libId, dir, el) {
+  var all = filesUnder(libCache[libId].folders, dir);
+  if (!all.length) return;
+  if (!confirm('删除 ' + all.length + ' 个文件？\n' + dir)) return;
+  try {
+    delete libCache[libId];
+    var lib = await api('/api/libraries/' + libId);
+    var keep = [];
+    for (var i = 0; i < lib.files.length; i++) {
+      if (all.indexOf(lib.files[i].path) === -1)
+        keep.push({ idx: keep.length, path: lib.files[i].path.replace(/\\/g, '/'), etag: lib.files[i].etag, size: lib.files[i].size });
+    }
+    await api('/api/libraries/' + libId, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ files: keep })
+    });
+    log('已删除文件夹：' + dir + ' (' + all.length + ' 个)');
+    var tree = document.getElementById('tree_' + libId);
+    tree.classList.remove('open');
+    var b = tree.parentElement.querySelector('.vp-btn.secondary.sm');
+    if (b && b.textContent === '收起文件') b.textContent = '展开文件';
+    loadLibs();
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+async function mergeCat(cat) {
+  var items = (await api('/api/libraries')).items || [];
+  var ids = [];
+  for (var i = 0; i < items.length; i++) {
+    if ((items[i].category || '') === cat) ids.push(items[i].id);
+  }
+  if (ids.length < 2) {
+    alert('此分类只有一个库，无需合并');
+    return;
+  }
+  if (!confirm('合并「' + cat + '」下的 ' + ids.length + ' 个库为 1 个？\n原库将被删除，已生成 STRM 不受影响')) return;
+  try {
+    var allFiles = [], names = [];
+    for (var j = 0; j < ids.length; j++) {
+      var lib = await api('/api/libraries/' + ids[j]);
+      names.push(lib.name);
+      for (var k = 0; k < lib.files.length; k++) {
+        var f = lib.files[k];
+        allFiles.push({ etag: f.etag, size: String(f.size), path: f.path.replace(/\\/g, '/') });
+      }
+    }
+    var mergedName = names.join(' + ').substring(0, 80);
+    for (var d = 0; d < ids.length; d++) {
+      await api('/api/libraries/' + encodeURIComponent(ids[d]), { method: 'DELETE' });
+    }
+    var newLib = await api('/api/libraries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: mergedName, content: { files: allFiles }, category: cat })
+    });
+    log('合并完成：' + ids.length + ' 个库 → ' + newLib.id + '（' + allFiles.length + ' 个文件）');
+    loadLibs();
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+async function genSTRM(id) {
+  try {
+    var o = document.getElementById('outDir').value, s = document.getElementById('srvBase').value;
+    var j = await api('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lib_id: id, output_dir: o, server_base: s, include_subtitles: true })
+    });
+    log('✓ 完成：' + j.count + ' STRM' + (j.subtitles ? ', ' + j.subtitles + ' 字幕' : '') + '\n输出：' + j.output_dir + '\n' + j.examples.slice(0, 5).join('\n'));
+  } catch(e) {
+    alert(e.message);
+  }
+}
+
+async function delLib(id) {
+  if (!confirm('删除秒传库 ' + id + ' ？')) return;
+  await api('/api/libraries/' + encodeURIComponent(id), { method: 'DELETE' });
+  loadLibs();
+}
+
+function askRename(id, name) {
+  renameLibId = id;
+  document.getElementById('renameInput').value = name;
+  document.getElementById('renameDlg').classList.add('show');
+}
+
+function closeRename() {
+  document.getElementById('renameDlg').classList.remove('show');
+  renameLibId = null;
+}
+
+async function doRename() {
+  var name = document.getElementById('renameInput').value.trim();
+  if (!name || !renameLibId) { closeRename(); return; }
+  await api('/api/libraries/' + encodeURIComponent(renameLibId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: name })
+  });
+  closeRename();
+  loadLibs();
+  log('已重命名：' + name);
+}
+
+function askMerge(id, cat) {
+  mergeLibId = id;
+  document.getElementById('mergeCat').value = cat || '';
+  document.getElementById('mergeDlg').classList.add('show');
+}
+
+function closeMerge() {
+  document.getElementById('mergeDlg').classList.remove('show');
+  mergeLibId = null;
+}
+
+async function doMerge() {
+  var cat = document.getElementById('mergeCat').value;
+  if (!mergeLibId) { closeMerge(); return; }
+  await api('/api/libraries/' + encodeURIComponent(mergeLibId), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ category: cat })
+  });
+  closeMerge();
+  loadLibs();
+  log('已改分类为：' + (cat || '未分类') + '（文件索引保持不变）');
+}
+
+async function exportBackup() {
+  var r = await fetch(API + '/api/backup');
+  var blob = await r.blob();
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '123pan-strm-backup-' + Date.now() + '.json';
+  a.click();
+  log('✓ 备份已下载');
+}
+
+document.getElementById('restoreInput').onchange = async function() {
+  var f = this.files[0];
+  if (!f) return;
+  var fd = new FormData();
+  fd.append('file', f);
+  var r = await fetch(API + '/api/restore/upload', { method: 'POST', body: fd });
+  var j = await r.json();
+  if (!j.ok) { alert(j.error); return; }
+  log('恢复完成：成功 ' + j.restored + ' 个，跳过 ' + j.skipped + ' 个');
+  loadLibs();
+};
+
+document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
+  overlay.addEventListener('click', function(e) {
+    if (e.target === overlay) {
+      overlay.classList.remove('show');
+      renameLibId = null;
+      mergeLibId = null;
+    }
+  });
+});
+
+log('🚀 123 秒传 STRM Vision Pro 版已启动');
+log('正在加载配置...');
+loadMode();
+loadCfg();
+loadLibs();
+</script>
+</body>
+</html>
