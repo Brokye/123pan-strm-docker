@@ -164,7 +164,7 @@ def generate_strm(lib_id:str,output_dir:str,server_base:str,include_subtitles=Fa
     for f in lib.get('files',[]):
         rel=safe_rel_path(f['path']); ext=rel.suffix.lower()
         if ext in VIDEO_EXTS:
-            target=out_root/rel.with_suffix(rel.suffix+'.strm'); target.parent.mkdir(parents=True,exist_ok=True)
+            target=out_root/rel.with_suffix('.strm'); target.parent.mkdir(parents=True,exist_ok=True)
             url=make_play_url(server_base,f['idx'],f['etag'],int(f.get('size') or 0),rel.name)
             target.write_text(url+'\n',encoding='utf-8'); count+=1
             if len(examples)<10: examples.append(str(target))
