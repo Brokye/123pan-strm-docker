@@ -6,7 +6,7 @@
 
 一个面向 NAS / Docker 的 123 云盘媒体库 STRM 工具。
 
-本项目可以将 123 云盘秒传 JSON 转换为 STRM 文件，并在播放时自动秒传到 123 云盘缓存目录，获取真实下载直链后 302 跳转，适合 Emby / Jellyfin / Plex / Infuse / VidHub 等媒体库使用。
+本项目可以将 123 云盘秒传 JSON 转换为 STRM 文件，并在播放时自动秒传到 123 云盘缓存目录，获取真实下载直链后 302 跳转，适合 Emby / Jellyfin / Plex  等媒体库使用。
 
 ## 项目特点
 
@@ -16,7 +16,7 @@
 - 支持 NAS 长期运行
 - 支持 302 直链播放
 - 支持 Base62 ETag
-- 支持字幕 STRM 生成
+- 支持字幕下载
 - 支持账号密码 Web UI 配置
 - 避免 WebDAV 大目录卡顿
 
@@ -137,8 +137,6 @@ https://123pan.cn/s/c42ZVv-4Zep3
 - Emby
 - Jellyfin
 - Plex
-- Infuse
-- VidHub
 
 示例：
 
@@ -162,10 +160,6 @@ NAS 部署建议使用 NAS 局域网 IP。
 ### 为什么不使用 WebDAV？
 
 WebDAV 在大目录下容易卡顿，STRM 更适合媒体库扫描。
-
-### 修改账号密码后需要删除 token 吗？
-
-不需要，程序会自动处理。
 
 ## 鸣谢
 
