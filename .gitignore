@@ -7,3 +7,6 @@ strm_data/
 cache.json
 *.log
 .DS_Store
+
+# 生成的 STRM 文件，不入库
+/STRM输出/
