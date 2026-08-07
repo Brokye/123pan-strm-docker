@@ -446,6 +446,81 @@ body {
   padding-right: 40px;
 }
 
+.vp-dropdown {
+  position: relative;
+}
+
+.vp-dropdown-btn {
+  width: 100%;
+  background: var(--input-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: left;
+}
+
+.vp-dropdown-btn svg {
+  width: 12px;
+  height: 12px;
+  color: var(--text-tertiary);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.vp-dropdown.open .vp-dropdown-btn {
+  border-color: var(--accent-blue);
+  box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.12);
+}
+
+.vp-dropdown.open .vp-dropdown-btn svg {
+  transform: rotate(180deg);
+}
+
+.vp-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  box-shadow: var(--glass-shadow);
+  padding: 4px;
+  z-index: 50;
+  display: none;
+}
+
+.vp-dropdown.open .vp-dropdown-menu {
+  display: block;
+}
+
+.vp-dropdown-item {
+  padding: 9px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.vp-dropdown-item:hover {
+  background: var(--hover-bg);
+}
+
+.vp-dropdown-item.selected {
+  color: var(--accent-blue);
+  font-weight: 600;
+}
+
 .btn-group {
   display: flex;
   gap: 8px;
@@ -742,6 +817,31 @@ body {
   background: rgba(255, 59, 48, 0.1);
 }
 
+.strip-btn {
+  width: 20px;
+  height: 20px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--accent-blue);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.folder-header:hover .strip-btn {
+  opacity: 1;
+}
+
+.strip-btn:hover {
+  background: rgba(0, 113, 227, 0.12);
+}
+
 .folder-body {
   display: none;
   padding-left: 18px;
@@ -926,6 +1026,32 @@ body {
   justify-content: flex-end;
 }
 
+.modal-actions-left,
+.modal-actions-right {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.modal-actions-right {
+  margin-left: auto;
+}
+
+.vp-btn.ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--input-border);
+}
+
+.vp-btn.ghost:hover {
+  background: var(--hover-bg);
+  color: var(--text-primary);
+}
+
+.vp-btn.success.sm {
+  width: auto;
+}
+
 .hidden-input {
   display: none;
 }
@@ -942,6 +1068,309 @@ body {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+.vp-btn.purple {
+  background: linear-gradient(135deg, var(--accent-purple), var(--accent-blue));
+  color: white;
+}
+
+.vp-btn.purple:hover {
+  background: linear-gradient(135deg, #bf5af2, #0077ed);
+}
+
+.pan-modal {
+  width: 640px;
+  max-width: 94vw;
+  display: flex;
+  flex-direction: column;
+}
+
+.pan-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.pan-count {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.pan-tree {
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 14px;
+  padding: 8px;
+  max-height: 380px;
+  min-height: 180px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.pan-tree::-webkit-scrollbar { width: 5px; }
+.pan-tree::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 3px; opacity: .5; }
+
+.pan-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background .2s ease;
+}
+
+.pan-row:hover { background: var(--hover-bg); }
+
+.pan-chevron {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  color: var(--text-tertiary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform .2s ease;
+  cursor: pointer;
+  font-size: 10px;
+}
+
+.pan-chevron.open { transform: rotate(90deg); }
+.pan-chevron-placeholder { width: 14px; flex-shrink: 0; }
+
+.pan-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--accent-purple);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pan-icon.folder { color: var(--accent-blue); }
+.pan-icon svg { width: 14px; height: 14px; }
+
+.pan-name {
+  flex: 1;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pan-size { font-size: 11px; color: var(--text-tertiary); flex-shrink: 0; }
+.pan-children { padding-left: 8px; }
+.pan-loading { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 40px 0; color: var(--text-tertiary); font-size: 12px; }
+.pan-empty { text-align: center; padding: 40px 0; color: var(--text-tertiary); font-size: 12px; }
+
+.pan-summary {
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.pan-summary-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(52, 199, 89, 0.12);
+  color: var(--accent-green);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 8px;
+}
+
+.pan-summary-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.pan-summary-path {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+.pan-summary-meta {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.pan-summary-list {
+  max-height: 220px;
+  overflow-y: auto;
+  border-top: 1px solid var(--divider);
+  padding-top: 8px;
+}
+
+.pan-summary-list::-webkit-scrollbar { width: 5px; }
+.pan-summary-list::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 3px; }
+
+.pan-summary-row {
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 3px 4px;
+  border-radius: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pan-summary-row:hover { background: var(--hover-bg); }
+
+.pan-summary-more {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  padding: 4px;
+  text-align: center;
+}
+
+.vp-check {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.vp-check input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.vp-check-box {
+  position: absolute;
+  inset: 0;
+  background: var(--input-bg);
+  border: 1.5px solid var(--text-tertiary);
+  border-radius: 6px;
+  transition: all .25s cubic-bezier(.4, 0, .2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vp-check-box::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  border-left: 2px solid white;
+  border-bottom: 2px solid white;
+  transform: rotate(-45deg) scale(0);
+  transition: transform .2s cubic-bezier(.4, 0, .2, 1);
+  margin-top: -1px;
+}
+
+.vp-check input:checked + .vp-check-box {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.vp-check input:checked + .vp-check-box::after { transform: rotate(-45deg) scale(1); }
+
+.vp-check input:indeterminate + .vp-check-box {
+  background: var(--accent-blue);
+  border-color: var(--accent-blue);
+}
+
+.vp-check input:indeterminate + .vp-check-box::after {
+  transform: rotate(0) scale(1);
+  width: 8px;
+  height: 2px;
+  border: none;
+  background: white;
+  border-radius: 1px;
+}
+
+.progress-box { margin-bottom: 14px; }
+.progress-info { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; }
+.progress-bar { height: 6px; background: var(--btn-secondary-bg); border-radius: 6px; overflow: hidden; }
+.progress-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple)); border-radius: 6px; transition: width .3s ease; }
+
+#toastWrap {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 2000;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.vp-toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  padding: 12px 16px;
+  min-width: 260px;
+  max-width: 360px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, .15);
+  font-size: 13px;
+  color: var(--text-primary);
+  transform: translateX(120%);
+  transition: transform .4s cubic-bezier(.4, 0, .2, 1);
+  pointer-events: auto;
+}
+
+.vp-toast.show { transform: translateX(0); }
+
+.vp-toast-icon {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.vp-toast-icon svg { width: 14px; height: 14px; }
+.vp-toast.success .vp-toast-icon { background: rgba(52, 199, 89, .15); color: var(--accent-green); }
+.vp-toast.error .vp-toast-icon { background: rgba(255, 59, 48, .15); color: var(--accent-red); }
+.vp-toast.warn .vp-toast-icon { background: rgba(255, 149, 0, .15); color: var(--accent-orange); }
+.vp-toast.info .vp-toast-icon { background: rgba(0, 113, 227, .15); color: var(--accent-blue); }
+
+.confirm-modal { width: 420px; }
+
+.confirm-msg {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+  word-break: break-all;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.confirm-msg code {
+  font-family: "SF Mono", Consolas, monospace;
+  font-size: 12px;
+  background: var(--btn-secondary-bg);
+  padding: 1px 6px;
+  border-radius: 5px;
 }
 
 @media (max-width: 900px) {
@@ -1115,14 +1544,20 @@ body {
         
         <div class="form-group">
           <label class="form-label">分类</label>
-          <select class="vp-select" id="libCat">
-            <option value="">未分类</option>
-            <option value="电影">电影</option>
-            <option value="剧集">剧集</option>
-            <option value="动漫">动漫</option>
-            <option value="纪录片">纪录片</option>
-            <option value="综艺">综艺</option>
-          </select>
+          <div class="vp-dropdown" id="ddLibCat">
+            <button type="button" class="vp-dropdown-btn" onclick="ddToggle('ddLibCat')">
+              <span class="vp-dropdown-label">未分类</span>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </button>
+            <div class="vp-dropdown-menu">
+              <div class="vp-dropdown-item" data-val="" onclick="ddSelect('ddLibCat','',this)">未分类</div>
+              <div class="vp-dropdown-item" data-val="电影" onclick="ddSelect('ddLibCat','电影',this)">电影</div>
+              <div class="vp-dropdown-item" data-val="剧集" onclick="ddSelect('ddLibCat','剧集',this)">剧集</div>
+              <div class="vp-dropdown-item" data-val="动漫" onclick="ddSelect('ddLibCat','动漫',this)">动漫</div>
+              <div class="vp-dropdown-item" data-val="纪录片" onclick="ddSelect('ddLibCat','纪录片',this)">纪录片</div>
+              <div class="vp-dropdown-item" data-val="综艺" onclick="ddSelect('ddLibCat','综艺',this)">综艺</div>
+            </div>
+          </div>
         </div>
         
         <div class="form-group">
@@ -1138,6 +1573,16 @@ body {
             </svg>
             选择文件
           </button>
+          <button class="vp-btn purple full" onclick="openPanModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+              <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+              <polyline points="9.5 12 12 14.5 16.5 10"/>
+              <path d="M9.5 16h7"/>
+            </svg>
+            账号盘内文件生成
+          </button>
+        </div>
+        <div class="btn-group">
           <button class="vp-btn primary full" onclick="saveLib()">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
               <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
@@ -1247,6 +1692,13 @@ body {
           </div>
           <h2 class="card-title">运行日志</h2>
         </div>
+        <div class="progress-box" id="genProgress" style="display:none">
+          <div class="progress-info">
+            <span id="genProgressText">生成中...</span>
+            <span id="genProgressPct">0%</span>
+          </div>
+          <div class="progress-bar"><div class="progress-fill" id="genProgressFill"></div></div>
+        </div>
         <div id="log" class="log-container"></div>
       </div>
     </div>
@@ -1289,14 +1741,20 @@ body {
     <p class="modal-desc">此操作保留文件索引不变，已生成的 STRM 可继续使用</p>
     <div class="form-group">
       <label class="form-label">目标分类</label>
-      <select class="vp-select" id="mergeCat">
-        <option value="">未分类</option>
-        <option value="电影">电影</option>
-        <option value="剧集">剧集</option>
-        <option value="动漫">动漫</option>
-        <option value="纪录片">纪录片</option>
-        <option value="综艺">综艺</option>
-      </select>
+      <div class="vp-dropdown" id="ddMergeCat">
+        <button type="button" class="vp-dropdown-btn" onclick="ddToggle('ddMergeCat')">
+          <span class="vp-dropdown-label">未分类</span>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+        </button>
+        <div class="vp-dropdown-menu">
+          <div class="vp-dropdown-item" data-val="" onclick="ddSelect('ddMergeCat','',this)">未分类</div>
+          <div class="vp-dropdown-item" data-val="电影" onclick="ddSelect('ddMergeCat','电影',this)">电影</div>
+          <div class="vp-dropdown-item" data-val="剧集" onclick="ddSelect('ddMergeCat','剧集',this)">剧集</div>
+          <div class="vp-dropdown-item" data-val="动漫" onclick="ddSelect('ddMergeCat','动漫',this)">动漫</div>
+          <div class="vp-dropdown-item" data-val="纪录片" onclick="ddSelect('ddMergeCat','纪录片',this)">纪录片</div>
+          <div class="vp-dropdown-item" data-val="综艺" onclick="ddSelect('ddMergeCat','综艺',this)">综艺</div>
+        </div>
+      </div>
     </div>
     <div class="modal-actions">
       <button class="vp-btn secondary sm" onclick="closeMerge()">取消</button>
@@ -1305,11 +1763,203 @@ body {
   </div>
 </div>
 
+<div class="modal-overlay" id="panDlg">
+  <div class="vp-modal pan-modal">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:rgba(175,82,222,.12);color:var(--accent-purple)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+          <polyline points="9.5 12 12 14.5 16.5 10"/>
+          <path d="M9.5 16h7"/>
+        </svg>
+      </div>
+      <div>
+        <h3 class="modal-title">账号盘内文件生成</h3>
+        <p class="modal-desc" id="panDlgDesc" style="margin-bottom:0">勾选单个视频文件或整个文件夹，递归生成秒传 JSON（可多选）</p>
+      </div>
+    </div>
+    <div class="pan-toolbar" id="panToolbar">
+      <button class="vp-btn secondary sm" onclick="panSelectAll()">全选</button>
+      <button class="vp-btn secondary sm" onclick="panClearAll()">清空</button>
+      <button class="vp-btn secondary sm" onclick="panReload()">刷新</button>
+      <span class="pan-count" id="panCount">已选 0 个视频</span>
+    </div>
+    <div class="pan-summary" id="panSummary" style="display:none">
+      <div class="pan-summary-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="20 6 9 17 4 12"/></svg> 已生成</div>
+      <div class="pan-summary-head">
+        <span class="pan-summary-path" id="panSummaryPath"></span>
+        <span class="pan-summary-meta" id="panSummaryMeta"></span>
+      </div>
+      <div class="pan-summary-list" id="panSummaryList"></div>
+    </div>
+    <div class="pan-tree" id="panTree">
+      <div class="pan-loading"><span class="loading-spinner"></span> 正在加载网盘目录...</div>
+    </div>
+    <div class="progress-box" id="panProgress" style="display:none;margin-top:14px;margin-bottom:0">
+      <div class="progress-info">
+        <span id="panProgressText">准备中...</span>
+        <span id="panProgressPct">0%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="panProgressFill"></div></div>
+    </div>
+    <div class="modal-actions">
+      <div class="modal-actions-left">
+        <button class="vp-btn ghost sm" id="panBtnBack" onclick="panStepBack()" style="display:none">返回</button>
+        <button class="vp-btn secondary sm" onclick="closePanModal()">取消</button>
+      </div>
+      <div class="modal-actions-right">
+        <button class="vp-btn success sm" id="panBtnGen" onclick="panExport('generate')">生成 STRM</button>
+        <div id="panPostActions" style="display:none;gap:8px">
+          <button class="vp-btn success sm" onclick="panExport('import')">导入秒传库</button>
+          <button class="vp-btn primary sm" onclick="panExport('download')">导出秒传 json</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="confirmDlg">
+  <div class="vp-modal confirm-modal">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:rgba(255,59,48,.12);color:var(--accent-red)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
+      <h3 class="modal-title" id="confirmTitle">确认操作</h3>
+    </div>
+    <div class="confirm-msg" id="confirmMsg"></div>
+    <div class="modal-actions">
+      <button class="vp-btn secondary sm" onclick="closeConfirm()">取消</button>
+      <button class="vp-btn danger sm" id="confirmOk" onclick="doConfirm()">确认</button>
+    </div>
+  </div>
+</div>
+
+<div id="toastWrap"></div>
+
 <script>
 var API = window.location.origin;
 var libCache = {};
 var renameLibId = null;
 var mergeLibId = null;
+var panNodes = {};
+var panRoot = [];
+var panRootLoaded = false;
+var panBusy = false;
+var panSecJson = null;
+var panStep = 1;
+var genSTRMBusy = false;
+var confirmCb = null;
+var expandedLibs = {};
+var ddValues = { ddLibCat: '', ddMergeCat: '' };
+
+function toast(msg, type) {
+  var wrap = document.getElementById('toastWrap');
+  var icons = {
+    success: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>',
+    error: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+    warn: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>',
+    info: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>'
+  };
+  var t = document.createElement('div');
+  t.className = 'vp-toast ' + (type || 'info');
+  t.innerHTML = '<span class="vp-toast-icon">' + (icons[type] || icons.info) + '</span><span class="vp-toast-msg">' + esc(msg) + '</span>';
+  wrap.appendChild(t);
+  requestAnimationFrame(function() { t.classList.add('show'); });
+  setTimeout(function() {
+    t.classList.remove('show');
+    setTimeout(function() { t.remove(); }, 350);
+  }, 3500);
+}
+
+function confirmDialog(msg, opts, cb) {
+  if (typeof opts === 'function') { cb = opts; opts = {}; }
+  opts = opts || {};
+  confirmCb = cb;
+  document.getElementById('confirmTitle').textContent = opts.title || '确认操作';
+  document.getElementById('confirmMsg').innerHTML = msg;
+  var okBtn = document.getElementById('confirmOk');
+  okBtn.textContent = opts.ok || '确认';
+  okBtn.className = 'vp-btn sm ' + (opts.danger === false ? 'primary' : 'danger');
+  document.getElementById('confirmDlg').classList.add('show');
+}
+
+function closeConfirm() {
+  document.getElementById('confirmDlg').classList.remove('show');
+  confirmCb = null;
+}
+
+function doConfirm() {
+  var cb = confirmCb;
+  closeConfirm();
+  if (cb) cb();
+}
+
+function downloadJson(obj, filename) {
+  var blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
+
+function ddToggle(id) {
+  var el = document.getElementById(id);
+  var open = el.classList.contains('open');
+  document.querySelectorAll('.vp-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+  if (!open) el.classList.add('open');
+}
+
+function ddSelect(id, val, item) {
+  ddValues[id] = val;
+  document.getElementById(id).querySelector('.vp-dropdown-label').textContent = item.textContent;
+  document.getElementById(id).querySelectorAll('.vp-dropdown-item').forEach(function(it) {
+    it.classList.toggle('selected', it === item);
+  });
+  document.querySelectorAll('.vp-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+}
+
+function ddSet(id, val) {
+  ddValues[id] = val || '';
+  var el = document.getElementById(id);
+  var label = el.querySelector('.vp-dropdown-label');
+  el.querySelectorAll('.vp-dropdown-item').forEach(function(it) {
+    var sel = it.getAttribute('data-val') === (val || '');
+    it.classList.toggle('selected', sel);
+    if (sel) label.textContent = it.textContent;
+  });
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.vp-dropdown')) {
+    document.querySelectorAll('.vp-dropdown.open').forEach(function(d) { d.classList.remove('open'); });
+  }
+});
+
+function setProgress(prefix, show, pct, text) {
+  var box = document.getElementById(prefix + 'Progress');
+  box.style.display = show ? 'block' : 'none';
+  if (!show) return;
+  document.getElementById(prefix + 'ProgressFill').style.width = (pct || 0) + '%';
+  document.getElementById(prefix + 'ProgressPct').textContent = (pct || 0) + '%';
+  document.getElementById(prefix + 'ProgressText').textContent = text || '';
+}
+
+async function pollTask(taskId, onUpdate) {
+  for (;;) {
+    var j = await api('/api/task/' + taskId);
+    if (onUpdate) onUpdate(j);
+    if (j.state === 'done') return j;
+    if (j.state === 'error') throw new Error(j.error || '任务执行失败');
+    await new Promise(function(r) { setTimeout(r, 600); });
+  }
+}
 
 function initTheme() {
   const savedTheme = localStorage.getItem('vp-theme') || 'light';
@@ -1471,7 +2121,7 @@ async function saveCfg() {
     });
     log('✓ 设置已保存');
   } catch(e) {
-    alert(e.message);
+    toast(e.message, 'error');
   }
 }
 
@@ -1479,7 +2129,7 @@ async function saveLib() {
   try {
     var raw = JSON.parse(document.getElementById('content').value);
     var name = document.getElementById('libName').value;
-    var cat = document.getElementById('libCat').value;
+    var cat = ddValues['ddLibCat'];
     var j = await api('/api/libraries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -1490,7 +2140,7 @@ async function saveLib() {
     document.getElementById('libName').value = '';
     loadLibs();
   } catch(e) {
-    alert(e.message);
+    toast(e.message, 'error');
   }
 }
 
@@ -1533,6 +2183,7 @@ function _itemHtml(x) {
       '<button class="vp-btn secondary sm" onclick="toggleLib(\'' + esc(x.id) + '\',this)">展开文件</button>' +
       '<button class="vp-btn secondary sm" onclick="askRename(\'' + esc(x.id) + '\',\'' + esc(x.name) + '\')">重命名</button>' +
       '<button class="vp-btn secondary sm" onclick="askMerge(\'' + esc(x.id) + '\',\'' + esc(cat) + '\')">改分类</button>' +
+      '<button class="vp-btn secondary sm" onclick="exportSecJson(\'' + esc(x.id) + '\')">导出秒传 json</button>' +
       '<button class="vp-btn danger sm" onclick="delLib(\'' + esc(x.id) + '\')">删除</button>' +
     '</div>' +
     '<div class="lib-tree" id="tree_' + esc(x.id) + '"></div>' +
@@ -1575,8 +2226,41 @@ async function loadLibs() {
     });
     
     el.innerHTML = h || '<div class="empty-state"><div class="empty-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></div><div class="empty-title">暂无秒传库</div><div class="empty-desc">添加 JSON 文件开始使用</div></div>';
+    restoreExpandedTrees();
   } catch(e) {
     log('加载库列表失败：' + e.message);
+  }
+}
+
+function restoreExpandedTrees() {
+  var ids = Object.keys(expandedLibs);
+  for (var i = 0; i < ids.length; i++) {
+    (function(id) {
+      var tree = document.getElementById('tree_' + id);
+      if (!tree) return;
+      var fill = function() {
+        var t = document.getElementById('tree_' + id);
+        if (!t || !libCache[id]) return;
+        t.innerHTML = renderTree(libCache[id].folders, libCache[id].files, id, libCache[id].common);
+        t.classList.add('open');
+        var b = t.parentElement.querySelector('.vp-btn.secondary.sm');
+        if (b) b.textContent = '收起文件';
+      };
+      if (!libCache[id]) {
+        api('/api/libraries/' + id).then(function(lib) {
+          if (libCache[id]) { fill(); return; }
+          var fs = {};
+          for (var i = 0; i < lib.files.length; i++) {
+            var f = lib.files[i];
+            fs[f.path] = { etag: f.etag || '', size: parseInt(f.size) || 0, name: f.path.split('/').pop() };
+          }
+          libCache[id] = { files: fs, folders: buildFolders(fs), common: (lib.commonPath || '').replace(/^\/+|\/+$/g, '') };
+          fill();
+        }).catch(function() {});
+      } else {
+        fill();
+      }
+    })(ids[i]);
   }
 }
 
@@ -1616,7 +2300,7 @@ function filesUnder(folders, dir) {
   return a;
 }
 
-function renderTree(folders, files, libId) {
+function renderTree(folders, files, libId, common) {
   var dirs = Object.keys(folders).sort(function(a, b) {
     var da = (a.match(/\//g) || []).length, db = (b.match(/\//g) || []).length;
     return da !== db ? da - db : a.localeCompare(b);
@@ -1627,8 +2311,38 @@ function renderTree(folders, files, libId) {
     var ls = dirs[i].lastIndexOf('/'), pd = ls >= 0 ? dirs[i].substring(0, ls) : null;
     if (!pd || !folders[pd]) top.push(dirs[i]);
   }
-  for (var t = 0; t < top.length; t++) h += renderDir(top[t], 0, folders, files, libId);
+  top.sort(function(a, b) { return a.localeCompare(b); });
+  var topFiles = [];
+  for (var fk in files) {
+    if (files[fk] && fk.indexOf('/') === -1) topFiles.push(fk);
+  }
+  topFiles.sort();
+  if (common) {
+    h += renderCommonDir(common, top, topFiles, folders, files, libId);
+  } else {
+    for (var t = 0; t < top.length; t++) h += renderDir(top[t], 0, folders, files, libId);
+    for (var f = 0; f < topFiles.length; f++) h += renderFile(topFiles[f], 0, files, libId);
+  }
   return h || '<div style="font-size:12px;color:var(--text-tertiary);padding:12px;text-align:center">无文件</div>';
+}
+
+function renderCommonDir(common, top, topFiles, folders, files, libId) {
+  var name = common.split('/').pop() || common;
+  var cnt = topFiles.length;
+  for (var i = 0; i < top.length; i++) cnt += countDesc(folders, top[i]);
+  var h = '<div>' +
+    '<div class="folder-header" style="padding-left:0" onclick="var a=this.querySelector(\'.chevron\');var b=this.parentElement.querySelector(\'.folder-body\');a.classList.toggle(\'open\');b.classList.toggle(\'open\')">' +
+      '<svg class="chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12"><polyline points="9 18 15 12 9 6"/></svg>' +
+      '<svg class="folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' +
+      '<span class="folder-name">' + esc(name) + '</span>' +
+      '<span class="folder-count">' + cnt + '</span>' +
+      '<button class="strip-btn" title="剥离壳目录" onclick="event.stopPropagation();stripCommonDir(\'' + esc(libId) + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg></button>' +
+    '</div>' +
+    '<div class="folder-body">';
+  for (var t = 0; t < top.length; t++) h += renderDir(top[t], 1, folders, files, libId);
+  for (var f = 0; f < topFiles.length; f++) h += renderFile(topFiles[f], 1, files, libId);
+  h += '</div></div>';
+  return h;
 }
 
 function renderDir(dir, depth, folders, files, libId) {
@@ -1652,6 +2366,7 @@ function renderDir(dir, depth, folders, files, libId) {
       '<svg class="folder-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>' +
       '<span class="folder-name">' + esc(name) + '</span>' +
       '<span class="folder-count">' + cnt + '</span>' +
+      '<button class="strip-btn" title="剥离壳目录" onclick="event.stopPropagation();stripDir(\'' + esc(libId) + '\',\'' + esc(dir) + '\')"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="9" x2="15" y2="15"/><line x1="15" y1="9" x2="9" y2="15"/></svg></button>' +
       '<button class="delete-btn" title="删除文件夹" onclick="event.stopPropagation();removeFolder(\'' + esc(libId) + '\',\'' + esc(dir) + '\',this)"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>' +
     '</div>' +
     '<div class="folder-body">';
@@ -1677,9 +2392,11 @@ async function toggleLib(id, btn) {
   var tree = document.getElementById('tree_' + id);
   if (tree.classList.contains('open')) {
     tree.classList.remove('open');
+    delete expandedLibs[id];
     btn.textContent = '展开文件';
     return;
   }
+  expandedLibs[id] = true;
   if (!libCache[id]) {
     var lib = await api('/api/libraries/' + id);
     var fs = {};
@@ -1687,65 +2404,104 @@ async function toggleLib(id, btn) {
       var f = lib.files[i];
       fs[f.path] = { etag: f.etag || '', size: parseInt(f.size) || 0, name: f.path.split('/').pop() };
     }
-    libCache[id] = { files: fs, folders: buildFolders(fs) };
+    libCache[id] = { files: fs, folders: buildFolders(fs), common: (lib.commonPath || '').replace(/^\/+|\/+$/g, '') };
   }
-  tree.innerHTML = renderTree(libCache[id].folders, libCache[id].files, id);
+  tree.innerHTML = renderTree(libCache[id].folders, libCache[id].files, id, libCache[id].common);
   tree.classList.add('open');
   btn.textContent = '收起文件';
 }
 
-async function removeFile(libId, fp, el) {
-  if (!confirm('删除此文件？\n' + fp)) return;
-  try {
-    delete libCache[libId];
-    var lib = await api('/api/libraries/' + libId);
-    var updated = [];
-    for (var i = 0; i < lib.files.length; i++) {
-      if (lib.files[i].path === fp) continue;
-      updated.push({ idx: updated.length, path: lib.files[i].path.replace(/\\/g, '/'), etag: lib.files[i].etag, size: lib.files[i].size });
+function removeFile(libId, fp, el) {
+  confirmDialog('删除此文件？<br><code>' + esc(fp) + '</code>', { ok: '删除', title: '删除文件' }, async function() {
+    try {
+      delete libCache[libId];
+      var lib = await api('/api/libraries/' + libId);
+      var updated = [];
+      for (var i = 0; i < lib.files.length; i++) {
+        if (lib.files[i].path === fp) continue;
+        updated.push({ idx: updated.length, path: lib.files[i].path.replace(/\\/g, '/'), etag: lib.files[i].etag, size: lib.files[i].size });
+      }
+      await api('/api/libraries/' + libId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: updated })
+      });
+      log('已删除：' + fp);
+      loadLibs();
+    } catch(e) {
+      toast(e.message, 'error');
     }
-    await api('/api/libraries/' + libId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: updated })
-    });
-    log('已删除：' + fp);
-    var tree = document.getElementById('tree_' + libId);
-    tree.classList.remove('open');
-    var b = tree.parentElement.querySelector('.vp-btn.secondary.sm');
-    if (b && b.textContent === '收起文件') b.textContent = '展开文件';
-    loadLibs();
-  } catch(e) {
-    alert(e.message);
-  }
+  });
 }
 
-async function removeFolder(libId, dir, el) {
+function removeFolder(libId, dir, el) {
   var all = filesUnder(libCache[libId].folders, dir);
   if (!all.length) return;
-  if (!confirm('删除 ' + all.length + ' 个文件？\n' + dir)) return;
-  try {
-    delete libCache[libId];
-    var lib = await api('/api/libraries/' + libId);
-    var keep = [];
-    for (var i = 0; i < lib.files.length; i++) {
-      if (all.indexOf(lib.files[i].path) === -1)
-        keep.push({ idx: keep.length, path: lib.files[i].path.replace(/\\/g, '/'), etag: lib.files[i].etag, size: lib.files[i].size });
+  confirmDialog('删除 <code>' + esc(dir) + '</code> 下的 ' + all.length + ' 个文件？', { ok: '删除', title: '删除文件夹' }, async function() {
+    try {
+      delete libCache[libId];
+      var lib = await api('/api/libraries/' + libId);
+      var keep = [];
+      for (var i = 0; i < lib.files.length; i++) {
+        if (all.indexOf(lib.files[i].path) === -1)
+          keep.push({ idx: keep.length, path: lib.files[i].path.replace(/\\/g, '/'), etag: lib.files[i].etag, size: lib.files[i].size });
+      }
+      await api('/api/libraries/' + libId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: keep })
+      });
+      log('已删除文件夹：' + dir + ' (' + all.length + ' 个)');
+      loadLibs();
+    } catch(e) {
+      toast(e.message, 'error');
     }
-    await api('/api/libraries/' + libId, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ files: keep })
-    });
-    log('已删除文件夹：' + dir + ' (' + all.length + ' 个)');
-    var tree = document.getElementById('tree_' + libId);
-    tree.classList.remove('open');
-    var b = tree.parentElement.querySelector('.vp-btn.secondary.sm');
-    if (b && b.textContent === '收起文件') b.textContent = '展开文件';
-    loadLibs();
-  } catch(e) {
-    alert(e.message);
-  }
+  });
+}
+
+function stripDir(libId, dir) {
+  confirmDialog('剥离文件夹 <code>' + esc(dir) + '</code> 的壳目录？<br>其下全部子节点将上移挂载到父级，<b>底层 path 元数据将同步更新</b>（已生成的 STRM 目录结构可能受影响）', { ok: '剥离', title: '剥离壳目录', danger: false }, async function() {
+    try {
+      var lib = await api('/api/libraries/' + libId);
+      var prefix = dir + '/';
+      var updated = [];
+      for (var i = 0; i < lib.files.length; i++) {
+        var p = lib.files[i].path.replace(/\\/g, '/');
+        if (p === dir) continue;
+        var np = p.indexOf(prefix) === 0 ? p.substring(dir.length + 1) : p;
+        updated.push({ idx: updated.length, path: np, etag: lib.files[i].etag, size: lib.files[i].size });
+      }
+      await api('/api/libraries/' + libId, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ files: updated })
+      });
+      delete libCache[libId];
+      log('已剥离壳目录：' + dir + '（元数据已更新）');
+      loadLibs();
+    } catch(e) {
+      toast(e.message, 'error');
+    }
+  });
+}
+
+function stripCommonDir(libId) {
+  var data = libCache[libId];
+  var cmn = (data && data.common) || '';
+  confirmDialog('剥离壳目录 <code>' + esc(cmn) + '</code>？<br>其下全部子节点将上移为顶层（commonPath 清空，文件 path 不变）', { ok: '剥离', title: '剥离壳目录', danger: false }, async function() {
+    try {
+      await api('/api/libraries/' + encodeURIComponent(libId), {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commonPath: '' })
+      });
+      delete libCache[libId];
+      log('已剥离壳目录：' + cmn + '（commonPath 已清空）');
+      loadLibs();
+    } catch(e) {
+      toast(e.message, 'error');
+    }
+  });
 }
 
 async function mergeCat(cat) {
@@ -1755,54 +2511,90 @@ async function mergeCat(cat) {
     if ((items[i].category || '') === cat) ids.push(items[i].id);
   }
   if (ids.length < 2) {
-    alert('此分类只有一个库，无需合并');
+    toast('此分类只有一个库，无需合并', 'warn');
     return;
   }
-  if (!confirm('合并「' + cat + '」下的 ' + ids.length + ' 个库为 1 个？\n原库将被删除，已生成 STRM 不受影响')) return;
-  try {
-    var allFiles = [], names = [];
-    for (var j = 0; j < ids.length; j++) {
-      var lib = await api('/api/libraries/' + ids[j]);
-      names.push(lib.name);
-      for (var k = 0; k < lib.files.length; k++) {
-        var f = lib.files[k];
-        allFiles.push({ etag: f.etag, size: String(f.size), path: f.path.replace(/\\/g, '/') });
+  confirmDialog('合并「' + esc(cat) + '」下的 ' + ids.length + ' 个库为 1 个？<br>原库将被删除，已生成 STRM 不受影响', { ok: '合并', title: '合并分类' }, async function() {
+    try {
+      var allFiles = [], names = [];
+      for (var j = 0; j < ids.length; j++) {
+        var lib = await api('/api/libraries/' + ids[j]);
+        names.push(lib.name);
+        for (var k = 0; k < lib.files.length; k++) {
+          var f = lib.files[k];
+          allFiles.push({ etag: f.etag, size: String(f.size), path: f.path.replace(/\\/g, '/') });
+        }
       }
+      var mergedName = names.join(' + ').substring(0, 80);
+      for (var d = 0; d < ids.length; d++) {
+        await api('/api/libraries/' + encodeURIComponent(ids[d]), { method: 'DELETE' });
+      }
+      var newLib = await api('/api/libraries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: mergedName, content: { files: allFiles }, category: cat })
+      });
+      log('合并完成：' + ids.length + ' 个库 → ' + newLib.id + '（' + allFiles.length + ' 个文件）');
+      loadLibs();
+    } catch(e) {
+      toast(e.message, 'error');
     }
-    var mergedName = names.join(' + ').substring(0, 80);
-    for (var d = 0; d < ids.length; d++) {
-      await api('/api/libraries/' + encodeURIComponent(ids[d]), { method: 'DELETE' });
-    }
-    var newLib = await api('/api/libraries', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: mergedName, content: { files: allFiles }, category: cat })
-    });
-    log('合并完成：' + ids.length + ' 个库 → ' + newLib.id + '（' + allFiles.length + ' 个文件）');
-    loadLibs();
-  } catch(e) {
-    alert(e.message);
-  }
+  });
 }
 
 async function genSTRM(id) {
+  if (genSTRMBusy) return;
+  var o = document.getElementById('outDir').value, s = document.getElementById('srvBase').value;
+  genSTRMBusy = true;
   try {
-    var o = document.getElementById('outDir').value, s = document.getElementById('srvBase').value;
+    setProgress('gen', true, 0, '正在准备生成 STRM...');
     var j = await api('/api/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ lib_id: id, output_dir: o, server_base: s, include_subtitles: true })
     });
-    log('✓ 完成：' + j.count + ' STRM' + (j.subtitles ? ', ' + j.subtitles + ' 字幕' : '') + '\n输出：' + j.output_dir + '\n' + j.examples.slice(0, 5).join('\n'));
+    var res = await pollTask(j.task_id, function(u) {
+      setProgress('gen', true, u.progress || 0, u.message || '');
+    });
+    setProgress('gen', false);
+    log('✓ 完成：' + res.result.count + ' STRM' + (res.result.subtitles ? ', ' + res.result.subtitles + ' 字幕' : '') + '\n输出：' + res.result.output_dir + '\n' + res.result.examples.slice(0, 5).join('\n'));
+    toast('生成 STRM 完成：' + res.result.count + ' 个文件', 'success');
   } catch(e) {
-    alert(e.message);
+    setProgress('gen', false);
+    toast(e.message, 'error');
+  } finally {
+    genSTRMBusy = false;
   }
 }
 
-async function delLib(id) {
-  if (!confirm('删除秒传库 ' + id + ' ？')) return;
-  await api('/api/libraries/' + encodeURIComponent(id), { method: 'DELETE' });
-  loadLibs();
+function delLib(id) {
+  confirmDialog('删除秒传库 <code>' + esc(id) + '</code> ？', { ok: '删除', title: '删除秒传库' }, async function() {
+    await api('/api/libraries/' + encodeURIComponent(id), { method: 'DELETE' });
+    loadLibs();
+    toast('已删除秒传库：' + id, 'success');
+  });
+}
+
+async function exportSecJson(id) {
+  try {
+    var lib = await api('/api/libraries/' + id);
+    var files = [];
+    for (var i = 0; i < lib.files.length; i++) {
+      var f = lib.files[i];
+      files.push({ etag: f.etag || '', size: String(f.size != null ? f.size : ''), path: f.path.replace(/\\/g, '/') });
+    }
+    var sec = {
+      scriptVersion: '114514',
+      exportVersion: '114514',
+      usesBase62EtagsInExport: true,
+      commonPath: lib.commonPath || '',
+      files: files
+    };
+    downloadJson(sec, (lib.name || id) + '.json');
+    log('✓ 已导出秒传 JSON：' + lib.name + '（' + files.length + ' 个文件）');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
 }
 
 function askRename(id, name) {
@@ -1831,7 +2623,7 @@ async function doRename() {
 
 function askMerge(id, cat) {
   mergeLibId = id;
-  document.getElementById('mergeCat').value = cat || '';
+  ddSet('ddMergeCat', cat || '');
   document.getElementById('mergeDlg').classList.add('show');
 }
 
@@ -1841,7 +2633,7 @@ function closeMerge() {
 }
 
 async function doMerge() {
-  var cat = document.getElementById('mergeCat').value;
+  var cat = ddValues['ddMergeCat'];
   if (!mergeLibId) { closeMerge(); return; }
   await api('/api/libraries/' + encodeURIComponent(mergeLibId), {
     method: 'PUT',
@@ -1851,6 +2643,312 @@ async function doMerge() {
   closeMerge();
   loadLibs();
   log('已改分类为：' + (cat || '未分类') + '（文件索引保持不变）');
+}
+
+function openPanModal() {
+  panStep = panSecJson ? 2 : 1;
+  document.getElementById('panDlg').classList.add('show');
+  panRenderStep();
+  panShowActions();
+  if (!panRootLoaded) {
+    panLoadDir(null);
+  } else {
+    panRender();
+  }
+}
+
+function closePanModal() {
+  document.getElementById('panDlg').classList.remove('show');
+  setProgress('pan', false, 0, '');
+}
+
+function panRenderStep() {
+  var step2 = panStep === 2;
+  document.getElementById('panToolbar').style.display = step2 ? 'none' : '';
+  document.getElementById('panTree').style.display = step2 ? 'none' : '';
+  document.getElementById('panSummary').style.display = step2 ? 'block' : 'none';
+  document.getElementById('panDlgDesc').textContent = step2
+    ? '已生成秒传库，可返回重新勾选，或直接导入 / 导出'
+    : '勾选单个视频文件或整个文件夹，递归生成秒传 JSON（可多选）';
+  if (step2) renderPanSummary();
+}
+
+function renderPanSummary() {
+  var sec = panSecJson;
+  if (!sec) return;
+  document.getElementById('panSummaryPath').textContent = sec.commonPath || '（根目录）';
+  var total = 0;
+  for (var i = 0; i < sec.files.length; i++) total += parseInt(sec.files[i].size) || 0;
+  document.getElementById('panSummaryMeta').textContent = sec.files.length + ' 个文件 · ' + fmtSize(total);
+  var show = sec.files.slice(0, 200);
+  var h = '';
+  for (var j = 0; j < show.length; j++) h += '<div class="pan-summary-row" title="' + esc(show[j].path) + '">' + esc(show[j].path) + '</div>';
+  if (sec.files.length > 200) h += '<div class="pan-summary-more">… 共 ' + sec.files.length + ' 个文件</div>';
+  document.getElementById('panSummaryList').innerHTML = h;
+}
+
+function panStepBack() {
+  if (panBusy) return;
+  panStep = 1;
+  panRenderStep();
+  panShowActions();
+  panRender();
+}
+
+function panShowActions() {
+  var step2 = panStep === 2;
+  document.getElementById('panBtnGen').style.display = step2 ? 'none' : '';
+  document.getElementById('panPostActions').style.display = step2 ? 'flex' : 'none';
+  document.getElementById('panBtnBack').style.display = step2 ? '' : 'none';
+}
+
+async function panLoadDir(node) {
+  var pid = (node && node.fileId) || 0;
+  if (node && node.loaded) return;
+  if (!node) {
+    panRootLoaded = false;
+    document.getElementById('panTree').innerHTML = '<div class="pan-loading"><span class="loading-spinner"></span> 正在加载网盘目录...</div>';
+  }
+  try {
+    var j = await api('/api/pan/list?parentFileId=' + pid);
+    var items = j.items || [];
+    var children = [];
+    for (var i = 0; i < items.length; i++) {
+      var it = items[i];
+      var key = String(it.fileId);
+      var n = {
+        key: key, fileId: it.fileId, name: it.name, type: it.type, size: it.size || 0, etag: it.etag || '',
+        parent: node || null, children: null, loaded: false, expanded: false,
+        checked: false, indeterminate: false
+      };
+      panNodes[key] = n;
+      children.push(n);
+    }
+    if (node) {
+      node.children = children;
+      node.loaded = true;
+      if (node.checked) {
+        for (var c = 0; c < children.length; c++) panForceChecked(children[c], true);
+      }
+      panUpdateAncestors(node);
+    } else {
+      panRoot = children;
+      panRootLoaded = true;
+    }
+    panRender();
+  } catch(e) {
+    if (!node) {
+      panRootLoaded = true;
+      document.getElementById('panTree').innerHTML = '<div class="pan-empty">加载失败：' + esc(e.message) + '</div>';
+    } else {
+      node.expanded = false;
+      node.loaded = true;
+      node.children = [];
+      panRender();
+      toast(e.message, 'error');
+    }
+  }
+}
+
+function panForceChecked(n, checked) {
+  n.checked = checked;
+  if (n.children) {
+    for (var i = 0; i < n.children.length; i++) panForceChecked(n.children[i], checked);
+  }
+}
+
+function panToggleDir(key) {
+  var n = panNodes[key];
+  if (!n) return;
+  n.expanded = !n.expanded;
+  if (n.expanded && !n.loaded) {
+    panLoadDir(n);
+  } else {
+    panRender();
+  }
+}
+
+function panToggle(key) {
+  var n = panNodes[key];
+  if (!n) return;
+  var checked = !n.checked;
+  if (n.type === 1) {
+    panForceChecked(n, checked);
+  } else {
+    n.checked = checked;
+  }
+  panUpdateAncestors(n);
+  panRender();
+}
+
+function panUpdateAncestors(n) {
+  var p = n.parent;
+  while (p) {
+    var kids = p.children;
+    if (kids && kids.length) {
+      var any = false, all = true;
+      for (var i = 0; i < kids.length; i++) {
+        var k = kids[i];
+        if (k.checked || k.indeterminate) any = true;
+        if (!k.checked) all = false;
+      }
+      p.checked = any && all;
+      p.indeterminate = any && !all;
+    } else {
+      p.checked = false;
+      p.indeterminate = false;
+    }
+    p = p.parent;
+  }
+}
+
+function panNodePath(n) {
+  var parts = [n.name];
+  var p = n.parent;
+  while (p) { parts.unshift(p.name); p = p.parent; }
+  return parts.join('/');
+}
+
+function panUpdateCount() {
+  var count = 0;
+  for (var k in panNodes) {
+    var n = panNodes[k];
+    if (n.type === 0 && n.checked) count++;
+  }
+  document.getElementById('panCount').textContent = '已选 ' + count + ' 个视频';
+}
+
+function panRender() {
+  var el = document.getElementById('panTree');
+  if (!panRootLoaded) {
+    el.innerHTML = '<div class="pan-loading"><span class="loading-spinner"></span> 正在加载网盘目录...</div>';
+    return;
+  }
+  var h = '';
+  for (var i = 0; i < panRoot.length; i++) h += panRenderNode(panRoot[i], 0);
+  el.innerHTML = h || '<div class="pan-empty">网盘为空</div>';
+  var boxes = el.querySelectorAll('.vp-check input');
+  for (var b = 0; b < boxes.length; b++) {
+    var n = panNodes[boxes[b].getAttribute('data-key')];
+    if (n && n.indeterminate) boxes[b].indeterminate = true;
+  }
+  panUpdateCount();
+}
+
+function panRenderNode(n, depth) {
+  var isFolder = n.type === 1;
+  var cbState = n.checked ? 'checked' : '';
+  var h = '<div class="pan-node">';
+  h += '<div class="pan-row" style="padding-left:' + (depth * 16 + 4) + 'px">';
+  h += '<label class="vp-check"><input type="checkbox" data-key="' + n.key + '" ' + cbState + ' onclick="event.stopPropagation();panToggle(\'' + n.key + '\')"><span class="vp-check-box"></span></label>';
+  if (isFolder) {
+    h += '<span class="pan-chevron' + (n.expanded ? ' open' : '') + '" onclick="event.stopPropagation();panToggleDir(\'' + n.key + '\')">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>';
+    h += '<span class="pan-icon folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>';
+  } else {
+    h += '<span class="pan-chevron-placeholder"></span>';
+    h += '<span class="pan-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></span>';
+  }
+  h += '<span class="pan-name" title="' + esc(panNodePath(n)) + '">' + esc(n.name) + '</span>';
+  if (!isFolder) h += '<span class="pan-size">' + fmtSize(n.size) + '</span>';
+  h += '</div>';
+  if (isFolder && n.expanded) {
+    h += '<div class="pan-children">';
+    if (!n.loaded) {
+      h += '<div class="pan-loading" style="padding:12px 0"><span class="loading-spinner"></span> 加载中...</div>';
+    } else if (n.children) {
+      for (var i = 0; i < n.children.length; i++) h += panRenderNode(n.children[i], depth + 1);
+    }
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function panCollect() {
+  var folders = [], files = [];
+  for (var k in panNodes) {
+    var n = panNodes[k];
+    if (!n.checked) continue;
+    var path = panNodePath(n);
+    if (n.type === 1) {
+      folders.push({ fileId: n.fileId, name: n.name, path: path });
+    } else {
+      files.push({ fileId: n.fileId, name: n.name, path: path, size: n.size, etag: n.etag });
+    }
+  }
+  return { folders: folders, files: files };
+}
+
+function panSelectAll() {
+  for (var i = 0; i < panRoot.length; i++) panForceChecked(panRoot[i], true);
+  panRender();
+}
+
+function panClearAll() {
+  for (var k in panNodes) { panNodes[k].checked = false; panNodes[k].indeterminate = false; }
+  panRender();
+}
+
+function panReload() {
+  panNodes = {};
+  panRoot = [];
+  panRootLoaded = false;
+  panLoadDir(null);
+}
+
+function finishPanExport(mode, sec) {
+  if (mode === 'import') {
+    document.getElementById('content').value = JSON.stringify(sec, null, 2);
+    document.getElementById('libName').value = sec.commonPath ? sec.commonPath.replace(/\/$/, '') : '账号盘导出';
+    closePanModal();
+    toast('已导入秒传库：' + sec.files.length + ' 个文件', 'success');
+    log('✓ 已导入账号盘秒传库：' + sec.files.length + ' 个文件');
+  } else {
+    downloadJson(sec, '123pan-export-' + Date.now() + '.json');
+    toast('已导出秒传文件：' + sec.files.length + ' 个文件', 'success');
+    log('✓ 已导出账号盘秒传文件：' + sec.files.length + ' 个文件');
+  }
+  if (sec.warnings && sec.warnings.length) log('⚠ 部分文件夹读取失败：\n' + sec.warnings.join('\n'));
+}
+
+async function panExport(mode) {
+  if (panBusy) return;
+  if (mode === 'import' || mode === 'download') {
+    if (!panSecJson) { toast('请先生成 STRM', 'warn'); return; }
+    finishPanExport(mode, panSecJson);
+    return;
+  }
+  var sel = panCollect();
+  if (!sel.folders.length && !sel.files.length) {
+    toast('请先勾选视频文件或文件夹', 'warn');
+    return;
+  }
+  panBusy = true;
+  try {
+    setProgress('pan', true, 0, '正在连接网盘...');
+    var j = await api('/api/pan/export', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ folders: sel.folders, files: sel.files })
+    });
+    var res = await pollTask(j.task_id, function(u) {
+      setProgress('pan', true, u.progress || 0, u.message || '');
+    });
+    if (!res.result || !res.result.files) throw new Error('返回结果为空');
+    panSecJson = res.result;
+    panStep = 2;
+    panRenderStep();
+    panShowActions();
+    toast(res.message || ('生成完成：' + panSecJson.files.length + ' 个文件'), 'success');
+    log('✓ 账号盘扫描完成：' + panSecJson.files.length + ' 个文件');
+    if (panSecJson.warnings && panSecJson.warnings.length) log('⚠ 部分文件夹读取失败：\n' + panSecJson.warnings.join('\n'));
+  } catch(e) {
+    toast('生成失败：' + e.message, 'error');
+  } finally {
+    panBusy = false;
+    setProgress('pan', false, 0, '');
+  }
 }
 
 async function exportBackup() {
@@ -1870,7 +2968,7 @@ document.getElementById('restoreInput').onchange = async function() {
   fd.append('file', f);
   var r = await fetch(API + '/api/restore/upload', { method: 'POST', body: fd });
   var j = await r.json();
-  if (!j.ok) { alert(j.error); return; }
+  if (!j.ok) { toast(j.error, 'error'); return; }
   log('恢复完成：成功 ' + j.restored + ' 个，跳过 ' + j.skipped + ' 个');
   loadLibs();
 };
@@ -1879,6 +2977,8 @@ document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
   overlay.addEventListener('click', function(e) {
     if (e.target === overlay) {
       overlay.classList.remove('show');
+      if (overlay.id === 'panDlg') setProgress('pan', false, 0, '');
+      if (overlay.id === 'confirmDlg') confirmCb = null;
       renameLibId = null;
       mergeLibId = null;
     }

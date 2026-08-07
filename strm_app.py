@@ -1,6 +1,7 @@
-import base64, json, os, re, time
+import base64, json, os, re, threading, time, uuid
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 from urllib.parse import quote
 
 import requests, uvicorn, yaml
@@ -9,6 +10,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from get_file_url import get_file_url
+from Pan123 import Pan123
+from utils import encryptEtagTo123FastLinkEtag
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_DATA_DIR = Path("/data") if Path("/data").exists() else BASE_DIR / "strm_data"
@@ -38,6 +41,232 @@ CATEGORY_DIRS = {"电影":"电影","剧集":"剧集","动漫":"动漫","纪录�
 def load_settings_yaml():
     with open(SETTINGS_PATH,"r",encoding="utf-8") as f: return yaml.safe_load(f.read()) or {}
 settings = load_settings_yaml()
+
+# 后台任务管理（pan 扫描 / strm 生成），支持百分比进度
+TASKS = {}
+TASKS_LOCK = threading.Lock()
+PAN_DRIVER_LOCK = threading.Lock()
+
+def cleanup_tasks():
+    now = time.time()
+    with TASKS_LOCK:
+        for tid in list(TASKS.keys()):
+            if now - TASKS[tid].get("updated", 0) > 3600:
+                del TASKS[tid]
+
+def start_task(name, gen):
+    task_id = uuid.uuid4().hex[:12]
+    state = {"id": task_id, "name": name, "state": "running", "progress": 0,
+             "message": "准备中...", "result": None, "error": None, "updated": time.time()}
+    with TASKS_LOCK:
+        TASKS[task_id] = state
+    def _run():
+        try:
+            for upd in gen:
+                with TASKS_LOCK:
+                    if state.get("state") == "cancelled":
+                        return
+                    state.update(upd)
+                    state["updated"] = time.time()
+            with TASKS_LOCK:
+                state["state"] = "done"
+                state["progress"] = 100
+                state["updated"] = time.time()
+        except Exception as e:
+            with TASKS_LOCK:
+                state["state"] = "error"
+                state["error"] = str(e)
+                state["message"] = str(e)
+                state["updated"] = time.time()
+    threading.Thread(target=_run, daemon=True).start()
+    return task_id
+
+def get_pan_driver(force_login=False):
+    """获取已登录的 123 网盘 driver，优先复用 cache.json 中的 token"""
+    try:
+        with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
+            settings_data = yaml.safe_load(f.read()) or {}
+    except Exception:
+        settings_data = {}
+    username = settings_data.get("123PAN_USERNAME", "")
+    password = settings_data.get("123PAN_PASSWORD", "")
+    driver = Pan123()
+    ensure_cache_file()
+    cached = {}
+    try:
+        cached = json.loads(CACHE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    if (not force_login and cached.get("tokenCreateTime")
+            and time.time() - cached.get("tokenCreateTime") < 25 * 24 * 60 * 60
+            and cached.get("accessToken")):
+        driver.setAccessToken(cached.get("accessToken"))
+    else:
+        with PAN_DRIVER_LOCK:
+            if not driver.doLogin(username=username, password=password) or not driver.getAccessToken():
+                raise RuntimeError("123 网盘登录失败，请检查账号密码")
+            cached["accessToken"] = driver.getAccessToken()
+            cached["tokenCreateTime"] = int(time.time())
+            CACHE_PATH.write_text(json.dumps(cached, ensure_ascii=False, indent=2), encoding="utf-8")
+    return driver
+
+def to_sec_etag(etag):
+    """账号盘 Etag(hex) -> 123FastLink base62 秒传 etag"""
+    etag = str(etag or "").strip()
+    if not etag:
+        return ""
+    if is_hex_md5(etag):
+        try:
+            return encryptEtagTo123FastLinkEtag(etag)
+        except Exception:
+            return etag
+    return etag
+
+def pan_export_task(driver, folders, files):
+    """多线程递归扫描账号盘选中内容，生成 123FastLink 秒传 JSON（带进度）"""
+    yield {"message": "准备扫描网盘目录...", "progress": 0}
+    folder_paths = [str(f.get("path") or "").strip("/") for f in folders]
+    def under_folder(path):
+        path = str(path or "").strip("/")
+        for fp in folder_paths:
+            if fp and (path == fp or path.startswith(fp + "/")):
+                return True
+        return False
+    # 只保留不在任何勾选文件夹内的单独勾选文件，避免重复
+    plain_files = [f for f in files if not under_folder(f.get("path", ""))]
+    queue = [{"fid": fd.get("fileId"), "path": folder_paths[i], "name": fd.get("name", "")}
+             for i, fd in enumerate(folders)]
+    discovered = len(queue)
+    processed = 0
+    scanned_files = {}   # fileId -> {"path","size","etag","name"}
+    lock = threading.Lock()
+    errors = []
+
+    def scan_one(task):
+        fid = task["fid"]
+        fpath = task["path"]
+        res = driver.listFilesSingle(fid)
+        if res.get("error"):
+            return task, None, res["error"]
+        out = []
+        for it in res.get("items", []):
+            cname = it.get("FileName")
+            cpath = f"{fpath}/{cname}" if fpath else cname
+            if it.get("Type") == 1:
+                out.append({"kind": "folder", "fid": it.get("FileId"), "path": cpath})
+            else:
+                out.append({"kind": "file", "item": it, "path": cpath})
+        return task, out, None
+
+    with ThreadPoolExecutor(max_workers=8) as ex:
+        while queue:
+            batch = queue[:]
+            queue = []
+            futures = {ex.submit(scan_one, t): t for t in batch}
+            for fut in as_completed(futures):
+                task, out, err = fut.result()
+                with lock:
+                    processed += 1
+                    if err:
+                        errors.append(f"{task.get('name') or task.get('fid')}: {err}")
+                    elif out:
+                        for r in out:
+                            if r["kind"] == "folder":
+                                discovered += 1
+                                queue.append({"fid": r["fid"], "path": r["path"]})
+                            else:
+                                fid = r["item"].get("FileId")
+                                if fid not in scanned_files:
+                                    scanned_files[fid] = {
+                                        "path": r["path"],
+                                        "size": int(r["item"].get("Size") or 0),
+                                        "etag": str(r["item"].get("Etag") or ""),
+                                        "name": r["item"].get("FileName") or "",
+                                    }
+                    pct = min(99, int(processed / discovered * 100)) if discovered else 99
+                    yield {"message": f"正在扫描文件夹 {processed}/{discovered}...", "progress": pct}
+
+    for f in plain_files:
+        fid = f.get("fileId")
+        if fid is not None and fid not in scanned_files:
+            scanned_files[fid] = {
+                "path": str(f.get("path") or f.get("name") or "").strip("/"),
+                "size": int(f.get("size") or 0),
+                "etag": str(f.get("etag") or ""),
+                "name": f.get("name") or "",
+            }
+
+    yield {"message": "扫描完成，正在生成秒传 JSON...", "progress": 99}
+    files_out = []
+    failed = 0
+    for fid, meta in scanned_files.items():
+        if not meta["path"] or not meta["etag"]:
+            failed += 1
+            continue
+        files_out.append({"path": meta["path"], "size": meta["size"], "etag": to_sec_etag(meta["etag"])})
+    root_name = folder_paths[0].split("/")[0] if folder_paths else ""
+    common = f"{root_name}/" if root_name and len(folder_paths) == 1 else ""
+    sec_json = {
+        "scriptVersion": "114514",
+        "exportVersion": "114514",
+        "usesBase62EtagsInExport": True,
+        "commonPath": common,
+        "files": files_out,
+    }
+    if errors:
+        sec_json["warnings"] = errors
+    fail_count = failed + len(errors)
+    yield {"message": f"完成：成功 {len(files_out)} 个，失败 {fail_count} 个",
+           "progress": 100, "result": sec_json}
+
+def generate_strm_task(lib_id, output_dir, server_base, include_subtitles=False):
+    """先生成 STRM，生成完后再下载字幕（带百分比进度）"""
+    lib = load_lib(lib_id)
+    category = lib.get('category', '')
+    cfg = config()
+    fast_mode = (cfg.get('mode', 'cache') == 'fast')
+    out_root = Path(output_dir).expanduser()
+    if category in CATEGORY_DIRS:
+        out_root = out_root / CATEGORY_DIRS[category]
+    files = lib.get('files', [])
+    total = len(files)
+    videos = [f for f in files if safe_rel_path(f['path']).suffix.lower() in VIDEO_EXTS]
+    subs = [f for f in files if include_subtitles and safe_rel_path(f['path']).suffix.lower() in SUBTITLE_EXTS]
+    count = subtitles = skipped = 0
+    examples = []
+
+    # 第一阶段：生成所有 STRM
+    for i, f in enumerate(videos):
+        rel = safe_rel_path(f['path'])
+        target = out_root / rel.with_suffix('.strm')
+        target.parent.mkdir(parents=True, exist_ok=True)
+        url = make_play_url(server_base, f['idx'], f['etag'], int(f.get('size') or 0), rel.name)
+        target.write_text(url + '\n', encoding='utf-8')
+        count += 1
+        if len(examples) < 10:
+            examples.append(str(target))
+        yield {"message": f"正在生成 {rel} ({i + 1}/{len(videos)})...",
+               "progress": int((i + 1) / max(len(videos), 1) * 80)}
+
+    # 第二阶段：下载字幕
+    if subs:
+        yield {"message": "生成完成，正在下载字幕...", "progress": 80}
+        for j, f in enumerate(subs):
+            rel = safe_rel_path(f['path'])
+            target = out_root / rel
+            if download_subtitle_file(f, target, fast_mode):
+                subtitles += 1
+            else:
+                skipped += 1
+            if len(examples) < 10:
+                examples.append(str(target))
+            yield {"message": f"正在下载字幕 ({j + 1}/{len(subs)})...",
+                   "progress": int(80 + (j + 1) / len(subs) * 20)}
+    else:
+        yield {"message": "无字幕文件", "progress": 100}
+
+    yield {"result": {"count": count, "subtitles": subtitles, "skipped": skipped,
+                      "output_dir": str(out_root), "examples": examples}}
 
 def safe_name(s:str)->str:
     s=str(s or '').replace('\x00','')
@@ -180,7 +409,8 @@ class SaveReq(BaseModel): name:str=''; content:Any; category:str=''
 class ModeReq(BaseModel): mode:str='cache'
 class GenReq(BaseModel): lib_id:str; output_dir:str=''; server_base:str=''; include_subtitles:bool=False
 class ConfigReq(BaseModel): output_dir:str=''; server_base:str=''; include_subtitles:bool=False; pan_username:str=''; pan_password:str=''
-class UpdateLibReq(BaseModel): name:str=''; category:str=''; files:Any=None
+class UpdateLibReq(BaseModel): name:str=''; category:str=''; files:Any=None; commonPath:Optional[str]=None
+class PanExportReq(BaseModel): folders:List[Dict[str,Any]]=[]; files:List[Dict[str,Any]]=[]
 
 app=FastAPI(title='123 sec-chuan -> STRM',docs_url=None,redoc_url=None)
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["*"],allow_headers=["*"])
@@ -231,6 +461,7 @@ def api_update_library(lib_id:str,req:UpdateLibReq):
     if req.files is not None:
         for i,f in enumerate(req.files): f['idx']=i
         lib['files']=req.files
+    if req.commonPath is not None: lib['commonPath']=req.commonPath
     old_path.write_text(json.dumps(lib,ensure_ascii=False,indent=2),encoding='utf-8')
     return {"ok":True,"id":lib['id'],"files":len(lib['files'])}
 
@@ -245,8 +476,49 @@ def api_generate(req:GenReq):
     c=config(); out=req.output_dir or c.get('output_dir') or DEFAULT_OUTPUT_DIR
     base=req.server_base or c.get('server_base') or os.getenv("SERVER_BASE",f"http://127.0.0.1:{settings.get('WEBDAV_PORT',8000)}")
     c['output_dir']=out; c['server_base']=base; save_config(c)
-    try: return generate_strm(req.lib_id,out,base,req.include_subtitles)
+    try:
+        task_id=start_task("generate",generate_strm_task(req.lib_id,out,base,req.include_subtitles))
+        return {"ok":True,"task_id":task_id}
     except Exception as e: return JSONResponse({"ok":False,"error":str(e)},status_code=400)
+
+@app.get('/api/pan/list')
+def api_pan_list(parentFileId:int=0):
+    try:
+        driver=get_pan_driver()
+    except Exception as e:
+        return JSONResponse({"ok":False,"error":str(e)},status_code=400)
+    res=driver.listFilesSingle(parentFileId)
+    if res.get("error"):
+        return JSONResponse({"ok":False,"error":res["error"]},status_code=400)
+    items=[]
+    for it in res.get("items",[]):
+        items.append({
+            "fileId":it.get("FileId"),
+            "name":it.get("FileName"),
+            "type":it.get("Type"),
+            "size":it.get("Size"),
+            "etag":it.get("Etag"),
+        })
+    return {"ok":True,"items":items}
+
+@app.post('/api/pan/export')
+def api_pan_export(req:PanExportReq):
+    try:
+        driver=get_pan_driver()
+    except Exception as e:
+        return JSONResponse({"ok":False,"error":str(e)},status_code=400)
+    task_id=start_task("pan_export",pan_export_task(driver,req.folders,req.files))
+    return {"ok":True,"task_id":task_id}
+
+@app.get('/api/task/{task_id}')
+def api_task_status(task_id:str):
+    cleanup_tasks()
+    with TASKS_LOCK:
+        t=TASKS.get(task_id)
+    if not t:
+        return JSONResponse({"ok":False,"error":"任务不存在或已过期"},status_code=404)
+    return {"ok":True,"state":t["state"],"progress":t["progress"],
+            "message":t["message"],"result":t["result"],"error":t["error"]}
 
 @app.get('/play/{file_id}/{etag}/{size}/{filename:path}')
 def play_direct(file_id:int,etag:str,size:int,filename:str):

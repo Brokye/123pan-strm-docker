@@ -228,6 +228,59 @@ class Pan123:
             logger.error(f"listFiles 请求发生异常 (parentFileId: {parentFileId}): {e}", exc_info=True)
             yield {"isFinish": False, "message": f"获取文件列表请求发生异常: {e}"}
 
+    def listFilesSingle(self, parentFileId):
+        # 单层列出文件夹下的文件和文件夹（非递归，支持分页）
+        # 用于前端文件树懒加载和账号盘内文件扫描
+        page = 0
+        body = {
+            "driveId":              "0",
+            "limit":                "100",
+            "next":                 "0",
+            "orderBy":              "file_id",
+            "orderDirection":       "desc",
+            "parentFileId":         parentFileId,
+            "trashed":              "false",
+            "SearchData":           "",
+            "Page":                 None,
+            "OnlyLookAbnormalFile": "0",
+            "event":                "homeListFile",
+            "operateType":          "4",
+            "inDirectSpace":        "false",
+        }
+
+        ALL_ITEMS = []
+        try:
+            while True:
+                page += 1
+                body.update({"Page": f"{page}"})
+                logger.debug(f"listFilesSingle: 正在获取第 {page} 页, parentFileId: {parentFileId}")
+                time.sleep(self.sleepTime())
+                response_data = requests.get(
+                    url = self.getActionUrl("FileList"),
+                    headers = self.headers,
+                    params = body
+                ).json()
+                if response_data.get("code") == 0:
+                    response_data = response_data.get("data") or {}
+                    ALL_ITEMS.extend(response_data.get("InfoList") or [])
+                    if (response_data.get("Next") == "-1") or not (response_data.get("InfoList")):
+                        logger.debug(f"listFilesSingle: 已是最后一页 (parentFileId: {parentFileId}, page: {page})")
+                        break
+                elif response_data.get("code") == 401 and self.username and self.password:
+                    logger.info("listFilesSingle: 检测到123 token失效，自动重新登录并重试")
+                    if self.doLogin(self.username, self.password):
+                        page = 0
+                        ALL_ITEMS = []
+                        continue
+                    return {"error": "登录状态失效，请检查账号密码"}
+                else:
+                    logger.warning(f"listFilesSingle 获取文件列表失败 (parentFileId: {parentFileId}, page: {page}): {json.dumps(response_data, ensure_ascii=False)}")
+                    return {"error": response_data.get("message") or f"code={response_data.get('code')}"}
+        except Exception as e:
+            logger.error(f"listFilesSingle 请求发生异常 (parentFileId: {parentFileId}): {e}", exc_info=True)
+            return {"error": f"请求异常: {e}"}
+        return {"items": ALL_ITEMS}
+
     def exportFiles(self, parentFileId):
         # 读取文件夹
         yield {"isFinish": None, "message": f"读取文件夹中..."}
