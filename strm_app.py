@@ -346,39 +346,28 @@ def list_libraries():
             print(f"跳过无效库文件 {p.name}: {e}")
     return rows
 
-def is_hex_md5(etag:str)->bool:
-    etag = str(etag or "").strip()
-    if not etag: return False
-    # 必须是严格 32 位 hex。放宽成 [0-9a-fA-F]+ 会把只含 0-9a-f 的 base62 etag
-    # 误判为 hex，导致 to_sec_etag / 候选生成走错分支。
-    return bool(re.fullmatch(r"[0-9a-fA-F]{32}", etag))
+def is_hex_md5(etag:str)->bool: return bool(re.fullmatch(r"[0-9a-fA-F]{32}",str(etag or "")))
 
 def base62_to_hex_candidates(etag:str)->List[str]:
-    """把 STRM 里的 etag 归一成 123 网盘秒传接口能接受的 32 位 hex。
-
-    历史实现用 4 套字母表暴力猜，其中 2 套会产出 33 位非法字符串，
-    5 个候选逐个打接口既触发风控(100011)又必然报「Etag格式异常」。
-    实际上 utils.decrypt123FastLinkEtagToEtag 就是权威逆算法，直接用即可。
-    """
     etag=str(etag or "").strip()
     if not etag: return []
     if is_hex_md5(etag): return [etag.lower()]
-    # 123FastLink base62 etag：32 位 hex 编码后不超过 22 位
-    if re.fullmatch(r"[0-9a-zA-Z]{1,22}", etag):
+    alphabets=["0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ","0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz","ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789","abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"]
+    out=[]
+    for ab in alphabets:
         try:
-            h=decrypt123FastLinkEtagToEtag(etag)
-            if is_hex_md5(h): return [h.lower()]
-        except Exception: pass
-    return [etag]
+            n=0
+            for ch in etag: n=n*62+ab.index(ch)
+            h=f"{n:032x}"
+            if len(h)<=32: h=h[-32:].zfill(32)
+            if h not in out: out.append(h)
+        except: continue
+    if etag not in out: out.append(etag)
+    return out
 
 def get_file_url_with_etag_candidates(name:str,etag:str,size:int,fast_mode:bool=False)->str:
-    # 原实现注释写「先尝试原始 etag」，但循环首行 `if e == etag: continue`
-    # 恰好把原始值跳过了，先跑 4 个猜出来的错误 hex 才回落，请求量放大 5 倍。
-    last_url=None
-    seen=set()
-    for e in base62_to_hex_candidates(etag):
-        if not e or e in seen: continue
-        seen.add(e)
+    candidates=base62_to_hex_candidates(etag); last_url=None
+    for e in candidates:
         url=get_file_url(name=name,etag=e,size=int(size),fast_mode=fast_mode); last_url=url
         if url and "222.186.21.40:33333/NGGYU.mp4" not in url: return url
     return last_url

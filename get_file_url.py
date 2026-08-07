@@ -15,8 +15,6 @@ _DEFAULT_DATA_DIR = Path("/data") if Path("/data").exists() else _BASE_DIR / "st
 _DATA_DIR = Path(os.getenv("DATA_DIR", str(_DEFAULT_DATA_DIR))).expanduser()
 SETTINGS_PATH = os.getenv("SETTINGS_PATH", str(_DATA_DIR / "settings.yaml"))
 CACHE_PATH = os.getenv("CACHE_PATH", str(_DATA_DIR / "cache.json"))
-# 缓存文件夹固定名（与 WebDAV 挂载版一致）
-CACHE_DIR_NAME = "__缓存目录_无视即可_24h自动清理__123Pan-Unlimited-WebDAV"
 def ensure_cache_file():
     try:
         os.makedirs(os.path.dirname(CACHE_PATH), exist_ok=True) if os.path.dirname(CACHE_PATH) else None
@@ -30,8 +28,6 @@ def ensure_cache_file():
                     "tokenCreateTime": "",
                     "lastDeleteTime": "",
                     "accountHash": "",
-                    "cacheFolderId": "",
-                    "directUrlCache": {},
                 },
                 f,
                 indent=4,
@@ -49,25 +45,11 @@ def reset_cache_for_account_change(cache_data, current_hash):
         cache_data["accessToken"] = ""
         cache_data["tokenCreateTime"] = ""
         cache_data["lastDeleteTime"] = ""
-        cache_data["cacheFolderId"] = ""
     cache_data["accountHash"] = current_hash
     return cache_data
 
 
 def get_file_url(name, etag, size, fast_mode=False) -> str:
-    # 直链缓存：同一文件(etag+size) 30 分钟内直接返回，避免反复打 123 API
-    # 解决 Emby HTTPStrm 10 秒超时问题：第二次播放/预解析秒回
-    _cache_key = f"{etag}|{size}"
-    try:
-        with open(CACHE_PATH, "r", encoding="utf-8") as f:
-            _cache = json.load(f)
-        _url_map = _cache.get("directUrlCache") or {}
-        _hit = _url_map.get(_cache_key)
-        if _hit and time.time() - _hit.get("ts", 0) < 30 * 60:
-            print(f"[直链缓存] 命中 {name} ({int(time.time())-int(_hit.get('ts',0))}s 前)")
-            return _hit.get("url")
-    except Exception:
-        pass
     # 读取配置文件
     with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
         settings_data = yaml.safe_load(f.read())
@@ -89,43 +71,20 @@ def get_file_url(name, etag, size, fast_mode=False) -> str:
         )
         if driver.getAccessToken() is None:
             print("登录失败, 请检查用户名或密码能否正常登录")
-            return None
+            return "http://222.186.21.40:33333/NGGYU.mp4"
         cache_data["accessToken"] = driver.getAccessToken()
         cache_data["tokenCreateTime"] = int(time.time())
         cache_data["accountHash"] = current_hash
         with open(CACHE_PATH, "w", encoding="utf-8") as f:
             json.dump(cache_data, f, indent=4, ensure_ascii=False)
-    # 创建/复用缓存文件夹（避免每次播放都调 Mkdir，触发 123 网盘限流 100011）
-    cache_folder_id = str(cache_data.get("cacheFolderId") or "")
-    if cache_folder_id:
-        cacheFolderInfo = {"FileId": int(cache_folder_id), "FileName": CACHE_DIR_NAME}
-        cacheFolderId = int(cache_folder_id)
+    # 创建缓存文件夹
+    action_result = driver.createFolder(0, "__缓存目录_无视即可_24h自动清理__123Pan-Unlimited-WebDAV", True)
+    if action_result.get("isFinish"):
+        cacheFolderInfo = action_result.get("message").get("Info")
+        cacheFolderId = cacheFolderInfo.get("FileId")
     else:
-        # 先查根目录是否已有同名缓存文件夹（单层，非递归）
-        cacheFolderId = None
-        try:
-            listed = driver.listFilesSingle(0)
-            for it in (listed.get("items") or []):
-                if it.get("FileName") == CACHE_DIR_NAME:
-                    cacheFolderId = int(it.get("FileId"))
-                    cacheFolderInfo = {"FileId": cacheFolderId, "FileName": CACHE_DIR_NAME}
-                    cache_data["cacheFolderId"] = cacheFolderId
-                    with open(CACHE_PATH, "w", encoding="utf-8") as f:
-                        json.dump(cache_data, f, indent=4, ensure_ascii=False)
-                    break
-        except Exception as e:
-            print(f"查找缓存文件夹异常(忽略): {e}")
-        if not cacheFolderId:
-            action_result = driver.createFolder(0, CACHE_DIR_NAME, True)
-            if action_result.get("isFinish"):
-                cacheFolderInfo = action_result.get("message").get("Info")
-                cacheFolderId = cacheFolderInfo.get("FileId")
-                cache_data["cacheFolderId"] = cacheFolderId
-                with open(CACHE_PATH, "w", encoding="utf-8") as f:
-                    json.dump(cache_data, f, indent=4, ensure_ascii=False)
-            else:
-                print(action_result.get("message"))
-                return None
+        print(action_result.get("message"))
+        return "http://222.186.21.40:33333/NGGYU.mp4"
     # 上传文件
     action_result = driver.uploadFile(
                             etag=etag,
@@ -139,7 +98,7 @@ def get_file_url(name, etag, size, fast_mode=False) -> str:
         # print(action_result.get("message").get("Info"))
     else:
         print(action_result.get("message"))
-        return None
+        return "http://222.186.21.40:33333/NGGYU.mp4"
     # 获取下载地址
     action_result = driver.downloadFile(
         etag=file_data.get("Etag"),
@@ -154,7 +113,7 @@ def get_file_url(name, etag, size, fast_mode=False) -> str:
         # print(download_link)
     else:
         print(action_result.get("message"))
-        return None
+        return "http://222.186.21.40:33333/NGGYU.mp4"
     # 删除文件夹
     # 如果缓存里没有上次删除时间, 则把当前时间设置为上次删除时间
     if not cache_data.get("lastDeleteTime"):
@@ -163,18 +122,15 @@ def get_file_url(name, etag, size, fast_mode=False) -> str:
             json.dump(cache_data, f, indent=4, ensure_ascii=False)
     # 现在缓存里一定有时间，判断间隔是否24小时，如果大于24小时则删除
     if time.time() - cache_data.get("lastDeleteTime") > 24 * 60 * 60:
-        # 删除文件夹（纯缓存清理，失败绝不阻断播放——直链此时已拿到）
-        try:
-            action_result = driver.deleteFile([cacheFolderInfo], True)
-            if action_result.get("isFinish"):
-                print(f"彻底删除文件夹 {cacheFolderInfo.get('FileName')} 成功")
-                cache_data["cacheFolderId"] = ""
-            else:
-                print(f"清理缓存文件夹失败(忽略，不影响播放): {action_result.get('message')}")
-        except Exception as e:
-            print(f"清理缓存文件夹异常(忽略，不影响播放): {e}")
-        # 无论成败都更新 lastDeleteTime：避免每次播放都重试删除，
-        # 导致 123 网盘连续限流(100011 请勿频繁操作)滚雪球
+        # 删除文件夹
+        action_result = driver.deleteFile([cacheFolderInfo], True)
+        if action_result.get("isFinish"):
+            print(f"彻底删除文件夹 {cacheFolderInfo.get('FileName')} 成功")
+            # print(action_result)
+        else:
+            print(action_result.get("message"))
+            return "http://222.186.21.40:33333/NGGYU.mp4"
+        # 缓存里的时间更新为当前时间
         cache_data["lastDeleteTime"] = int(time.time())
         with open(CACHE_PATH, "w", encoding="utf-8") as f:
             json.dump(cache_data, f, indent=4, ensure_ascii=False) 
@@ -183,9 +139,9 @@ def get_file_url(name, etag, size, fast_mode=False) -> str:
     # 获取跳转后的链接
     real_url = download_link.split("params=")[-1].split("&")[0]
     real_url = base64.b64decode(real_url).decode("utf-8")
-    # 判断该链接是不是最终链接（加超时，防止无限挂起拖垮 /play/ 响应）
+    # 判断该链接是不是最终链接
     headers = {"Referer": "https://yun.123pan.com/"}
-    response = requests.get(real_url, headers=headers, allow_redirects=False, timeout=8)
+    response = requests.get(real_url, headers=headers, allow_redirects=False)
     if response.status_code == 302:
         # 如果是 302 重定向，从 'Location' 头获取最终 URL
         final_url = response.headers.get("location")
@@ -230,20 +186,6 @@ def get_file_url(name, etag, size, fast_mode=False) -> str:
         threading.Thread(target=_delayed_delete, args=(driver, file_data, name), daemon=True).start()
 
     print(f"获取到 {name} 的真实 URL: {final_url}")
-
-    # 写入直链缓存（30 分钟），下次播放/Emby 重试直接命中
-    if final_url:
-        try:
-            _url_map = cache_data.setdefault("directUrlCache", {})
-            _url_map[_cache_key] = {"url": final_url, "ts": int(time.time())}
-            # 限制缓存条数，防止无限膨胀
-            if len(_url_map) > 200:
-                for _k in sorted(_url_map, key=lambda k: _url_map[k].get("ts", 0))[:len(_url_map) - 200]:
-                    _url_map.pop(_k, None)
-            with open(CACHE_PATH, "w", encoding="utf-8") as f:
-                json.dump(cache_data, f, indent=4, ensure_ascii=False)
-        except Exception as e:
-            print(f"写直链缓存失败(忽略): {e}")
 
     return final_url
 
