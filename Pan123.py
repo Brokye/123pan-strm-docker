@@ -5,7 +5,7 @@ import base64
 import json
 import random
 
-from utils import anonymizeId, makeAbsPath
+from utils import anonymizeId, makeAbsPath, decrypt123FastLinkEtagToEtag
 
 from getGlobalLogger import logger
 
@@ -560,8 +560,14 @@ class Pan123:
         for item in ALL_FILES:
             if item.get("fileDepth") == 0:
                 ID_MAP[item.get("parentFileId")] = rootFolderId
+            etag = item.get("Etag")
+            # base62格式的秒传etag需要转回hex才能上传到123pan API
+            try:
+                int(etag, 16)
+            except (ValueError, TypeError):
+                etag = decrypt123FastLinkEtagToEtag(etag)
             newFileId = self.uploadFile(
-                etag = item.get("Etag"),
+                etag = etag,
                 fileName = item.get("FileName"),
                 parentFileId = ID_MAP.get(item.get("parentFileId")), # 基于新的目录结构上传文件
                 size = item.get("Size")

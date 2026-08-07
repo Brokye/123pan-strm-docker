@@ -346,7 +346,11 @@ def list_libraries():
             print(f"跳过无效库文件 {p.name}: {e}")
     return rows
 
-def is_hex_md5(etag:str)->bool: return bool(re.fullmatch(r"[0-9a-fA-F]{32}",str(etag or "")))
+def is_hex_md5(etag:str)->bool:
+    etag = str(etag or "").strip()
+    if not etag: return False
+    # 允许任意长度的合法 hex 字符串（123pan 的 etag 不一定是标准 32 位 MD5）
+    return bool(re.fullmatch(r"[0-9a-fA-F]+", etag))
 
 def base62_to_hex_candidates(etag:str)->List[str]:
     etag=str(etag or "").strip()
