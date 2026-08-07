@@ -50,6 +50,32 @@ def reset_cache_for_account_change(cache_data, current_hash):
 
 
 def get_file_url(name, etag, size, fast_mode=False) -> str:
+    """对外入口：播放直链获取。
+
+    自动处理 cache.json 中 accessToken 缓存失效的问题：
+    首次链路失败时（如登录/上传/下载失败），自动清除 accessToken 缓存
+    并重新登录重试一次 —— 相当于自动执行「删除 cache.json 后重启」，
+    下游用户无需手动干预。
+    """
+    url = _get_file_url_once(name, etag, size, fast_mode)
+    if url is None or "222.186.21.40:33333/NGGYU.mp4" in str(url):
+        # 疑似 token 缓存失效（用户手动删 cache.json 可解决，这里自动代为处理）
+        try:
+            with open(CACHE_PATH, "r", encoding="utf-8") as f:
+                cache_data = json.load(f)
+            if cache_data.get("accessToken"):
+                print("播放链路失败，检测到缓存 accessToken，自动清除并重新登录重试...")
+                cache_data["accessToken"] = ""
+                cache_data["tokenCreateTime"] = ""
+                with open(CACHE_PATH, "w", encoding="utf-8") as f:
+                    json.dump(cache_data, f, indent=4, ensure_ascii=False)
+                url = _get_file_url_once(name, etag, size, fast_mode)
+        except Exception as e:
+            print(f"自动重置 token 缓存异常(忽略): {e}")
+    return url
+
+
+def _get_file_url_once(name, etag, size, fast_mode=False) -> str:
     # 读取配置文件
     with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
         settings_data = yaml.safe_load(f.read())
