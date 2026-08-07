@@ -370,10 +370,15 @@ def base62_to_hex_candidates(etag:str)->List[str]:
     return out
 
 def get_file_url_with_etag_candidates(name:str,etag:str,size:int,fast_mode:bool=False)->str:
-    candidates=base62_to_hex_candidates(etag); last_url=None
-    for e in candidates:
+    # 先尝试原始 etag（可能是 base62 或 hex），再尝试转换后的 hex
+    last_url=None
+    for e in [etag, *base62_to_hex_candidates(etag)]:
+        if e == etag: continue  # 跳过重复的原始值
         url=get_file_url(name=name,etag=e,size=int(size),fast_mode=fast_mode); last_url=url
         if url and "222.186.21.40:33333/NGGYU.mp4" not in url: return url
+    # 尝试原始 etag
+    url=get_file_url(name=name,etag=etag,size=int(size),fast_mode=fast_mode); last_url=url
+    if url and "222.186.21.40:33333/NGGYU.mp4" not in url: return url
     return last_url
 
 def make_play_url(base:str,file_id:int,etag:str,size:int,filename:str)->str:

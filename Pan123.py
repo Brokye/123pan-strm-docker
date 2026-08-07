@@ -561,11 +561,12 @@ class Pan123:
             if item.get("fileDepth") == 0:
                 ID_MAP[item.get("parentFileId")] = rootFolderId
             etag = item.get("Etag")
-            # base62格式的秒传etag需要转回hex才能上传到123pan API
+            # 先尝试原始 etag，失败后再尝试转换为 hex
             try:
                 int(etag, 16)
             except (ValueError, TypeError):
-                etag = decrypt123FastLinkEtagToEtag(etag)
+                # base62 格式，尝试直接上传，失败后再转 hex
+                pass
             newFileId = self.uploadFile(
                 etag = etag,
                 fileName = item.get("FileName"),
