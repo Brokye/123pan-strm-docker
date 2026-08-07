@@ -5,6 +5,9 @@ import base64
 import json
 import random
 
+# 所有 123 API 请求统一超时(秒)：防止某一步卡死导致整个 /play/ 超时
+API_TIMEOUT = 8
+
 from utils import anonymizeId, makeAbsPath, decrypt123FastLinkEtagToEtag
 
 from getGlobalLogger import logger
@@ -89,8 +92,8 @@ class Pan123:
             response_data = requests.post(
                 url = self.getActionUrl("SignIn"),
                 headers = headers,
-                json = payload
-            ).json()
+                json = payload,
+            timeout=API_TIMEOUT).json()
             # sendRequest方法会处理检查API响应中的'code'字段（登录成功时期望值为200）
             # 如果登录成功，'code'将是200
             token = response_data.get("data", {}).get("token") # 从响应数据中提取token
@@ -118,6 +121,8 @@ class Pan123:
 
     def request_json(self, method, url, retry=True, **kwargs):
         """统一请求封装：如果 token 失效(code=401)，自动重新登录并重试一次。"""
+        if "timeout" not in kwargs:
+            kwargs["timeout"] = API_TIMEOUT
         try:
             if method.lower() == "post":
                 resp = requests.post(url=url, **kwargs)
@@ -143,8 +148,8 @@ class Pan123:
         try:
             response_data = requests.post(
                 url = self.getActionUrl("Logout"),
-                headers = self.headers
-            ).json()
+                headers = self.headers,
+            timeout=API_TIMEOUT).json()
             # sendRequest方法会处理检查API响应中的'code'字段（注销成功时期望值为200）
             if response_data.get("code") == 200:
                 self.accessToken = None
@@ -198,8 +203,8 @@ class Pan123:
                 response_data = requests.get(
                     url = self.getActionUrl("FileList"),
                     headers = self.headers,
-                    params = body
-                ).json()
+                    params = body,
+                timeout=API_TIMEOUT).json()
                 if response_data.get("code") == 0:
                     response_data = response_data.get("data")
                     # 把文件列表添加到ALL_FILES
@@ -258,8 +263,8 @@ class Pan123:
                 response_data = requests.get(
                     url = self.getActionUrl("FileList"),
                     headers = self.headers,
-                    params = body
-                ).json()
+                    params = body,
+                timeout=API_TIMEOUT).json()
                 if response_data.get("code") == 0:
                     response_data = response_data.get("data") or {}
                     ALL_ITEMS.extend(response_data.get("InfoList") or [])
@@ -404,8 +409,8 @@ class Pan123:
             response_data = requests.post(
                 url = self.getActionUrl("Trash"),
                 headers = self.headers,
-                json = trash_body
-            ).json()
+                json = trash_body,
+            timeout=API_TIMEOUT).json()
             if response_data.get("code") == 0:
                 logger.debug(f"删除文件成功: {fileList}")
                 if not clearTrash:
@@ -415,8 +420,8 @@ class Pan123:
                     response_data = requests.post(
                         url = self.getActionUrl("TrashDelete"),
                         headers = self.headers,
-                        json = delete_body
-                    ).json()
+                        json = delete_body,
+                    timeout=API_TIMEOUT).json()
                     if response_data.get("code") == 7301:
                         logger.debug(f"彻底删除文件成功: {fileList}")
                         return {"isFinish": True, "message": "彻底删除文件成功"}
@@ -628,8 +633,8 @@ class Pan123:
                 response_data = requests.get(
                     url = self.getActionUrl("ShareList"),
                     headers = self.headers,
-                    params = body
-                ).json()
+                    params = body,
+                timeout=API_TIMEOUT).json()
                 if response_data.get("code") == 0:
                     response_data = response_data.get("data")
                     # 把文件列表添加到ALL_FILES

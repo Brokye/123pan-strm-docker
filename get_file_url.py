@@ -31,6 +31,7 @@ def ensure_cache_file():
                     "lastDeleteTime": "",
                     "accountHash": "",
                     "cacheFolderId": "",
+                    "directUrlCache": {},
                 },
                 f,
                 indent=4,
@@ -54,6 +55,19 @@ def reset_cache_for_account_change(cache_data, current_hash):
 
 
 def get_file_url(name, etag, size, fast_mode=False) -> str:
+    # 直链缓存：同一文件(etag+size) 30 分钟内直接返回，避免反复打 123 API
+    # 解决 Emby HTTPStrm 10 秒超时问题：第二次播放/预解析秒回
+    _cache_key = f"{etag}|{size}"
+    try:
+        with open(CACHE_PATH, "r", encoding="utf-8") as f:
+            _cache = json.load(f)
+        _url_map = _cache.get("directUrlCache") or {}
+        _hit = _url_map.get(_cache_key)
+        if _hit and time.time() - _hit.get("ts", 0) < 30 * 60:
+            print(f"[直链缓存] 命中 {name} ({int(time.time())-int(_hit.get('ts',0))}s 前)")
+            return _hit.get("url")
+    except Exception:
+        pass
     # 读取配置文件
     with open(SETTINGS_PATH, "r", encoding="utf-8") as f:
         settings_data = yaml.safe_load(f.read())
@@ -169,9 +183,9 @@ def get_file_url(name, etag, size, fast_mode=False) -> str:
     # 获取跳转后的链接
     real_url = download_link.split("params=")[-1].split("&")[0]
     real_url = base64.b64decode(real_url).decode("utf-8")
-    # 判断该链接是不是最终链接
+    # 判断该链接是不是最终链接（加超时，防止无限挂起拖垮 /play/ 响应）
     headers = {"Referer": "https://yun.123pan.com/"}
-    response = requests.get(real_url, headers=headers, allow_redirects=False)
+    response = requests.get(real_url, headers=headers, allow_redirects=False, timeout=8)
     if response.status_code == 302:
         # 如果是 302 重定向，从 'Location' 头获取最终 URL
         final_url = response.headers.get("location")
@@ -216,6 +230,20 @@ def get_file_url(name, etag, size, fast_mode=False) -> str:
         threading.Thread(target=_delayed_delete, args=(driver, file_data, name), daemon=True).start()
 
     print(f"获取到 {name} 的真实 URL: {final_url}")
+
+    # 写入直链缓存（30 分钟），下次播放/Emby 重试直接命中
+    if final_url:
+        try:
+            _url_map = cache_data.setdefault("directUrlCache", {})
+            _url_map[_cache_key] = {"url": final_url, "ts": int(time.time())}
+            # 限制缓存条数，防止无限膨胀
+            if len(_url_map) > 200:
+                for _k in sorted(_url_map, key=lambda k: _url_map[k].get("ts", 0))[:len(_url_map) - 200]:
+                    _url_map.pop(_k, None)
+            with open(CACHE_PATH, "w", encoding="utf-8") as f:
+                json.dump(cache_data, f, indent=4, ensure_ascii=False)
+        except Exception as e:
+            print(f"写直链缓存失败(忽略): {e}")
 
     return final_url
 
