@@ -2419,6 +2419,33 @@ async function toggleLib(id, btn) {
   btn.textContent = '收起文件';
 }
 
+// 局部刷新指定库的文件树（不重建整个列表，避免删除后"闪一下"）
+// 保持该库展开状态，其他库 DOM 纹丝不动
+function refreshLibTree(libId) {
+  var tree = document.getElementById('tree_' + libId);
+  if (!tree) return;
+  if (!libCache[libId]) {
+    // 缓存被删（removeFile/removeFolder 会 delete），重新拉取
+    api('/api/libraries/' + libId).then(function(lib) {
+      if (libCache[libId]) { return; }
+      var fs = {};
+      for (var i = 0; i < lib.files.length; i++) {
+        var f = lib.files[i];
+        fs[f.path] = { etag: f.etag || '', size: parseInt(f.size) || 0, name: f.path.split('/').pop() };
+      }
+      libCache[libId] = { files: fs, folders: buildFolders(fs), common: (lib.commonPath || '').replace(/^\/+|\/+$/g, '') };
+      if (tree.classList.contains('open')) {
+        tree.innerHTML = renderTree(libCache[libId].folders, libCache[libId].files, libId, libCache[libId].common);
+      }
+    }).catch(function() {});
+    return;
+  }
+  // 缓存还在，直接重渲染当前库的树（保持展开）
+  if (tree.classList.contains('open')) {
+    tree.innerHTML = renderTree(libCache[libId].folders, libCache[libId].files, libId, libCache[libId].common);
+  }
+}
+
 function removeFile(libId, fp, el) {
   confirmDialog('删除此文件？<br><code>' + esc(fp) + '</code>', { ok: '删除', title: '删除文件' }, async function() {
     try {
@@ -2435,7 +2462,7 @@ function removeFile(libId, fp, el) {
         body: JSON.stringify({ files: updated })
       });
       log('已删除：' + fp);
-      loadLibs();
+      refreshLibTree(libId);
     } catch(e) {
       toast(e.message, 'error');
     }
@@ -2460,7 +2487,7 @@ function removeFolder(libId, dir, el) {
         body: JSON.stringify({ files: keep })
       });
       log('已删除文件夹：' + dir + ' (' + all.length + ' 个)');
-      loadLibs();
+      refreshLibTree(libId);
     } catch(e) {
       toast(e.message, 'error');
     }
@@ -2486,7 +2513,7 @@ function stripDir(libId, dir) {
       });
       delete libCache[libId];
       log('已剥离壳目录：' + dir + '（元数据已更新）');
-      loadLibs();
+      refreshLibTree(libId);
     } catch(e) {
       toast(e.message, 'error');
     }
