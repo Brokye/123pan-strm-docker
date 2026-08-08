@@ -419,6 +419,7 @@ class GenReq(BaseModel): lib_id:Optional[str]=''; output_dir:str=''; server_base
 class ConfigReq(BaseModel): output_dir:str=''; server_base:str=''; include_subtitles:bool=False; pan_username:str=''; pan_password:str=''
 class UpdateLibReq(BaseModel): name:str=''; category:str=''; files:Any=None; commonPath:Optional[str]=None
 class PanExportReq(BaseModel): folders:List[Dict[str,Any]]=[]; files:List[Dict[str,Any]]=[]
+class DedupReq(BaseModel): lib_id:str=''; delete_paths:List[str]=[]
 
 app=FastAPI(title='123 sec-chuan -> STRM',docs_url=None,redoc_url=None)
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["*"],allow_headers=["*"])
@@ -497,6 +498,24 @@ def api_sync_all_strm(req:Optional[GenReq]=None):
                                                           req.server_base if req else None,
                                                           req.include_subtitles if req else False))
         return {"ok":True,"task_id":task_id}
+    except Exception as e:
+        return JSONResponse({"ok":False,"error":str(e)},status_code=400)
+
+@app.post('/api/dedup/scan')
+def api_dedup_scan():
+    """扫描全部库中 etag(MD5) 完全相同的重复视频/字幕，返回待删清单（不删除）"""
+    try:
+        from strm_sync import dedup_scan_all
+        return dedup_scan_all()
+    except Exception as e:
+        return JSONResponse({"ok":False,"error":str(e)},status_code=400)
+
+@app.post('/api/dedup/apply')
+def api_dedup_apply(req:DedupReq):
+    """按用户勾选的 delete_paths 执行去重删除（删除前自动备份库 JSON）"""
+    try:
+        from strm_sync import dedup_apply
+        return dedup_apply(req.lib_id, req.delete_paths)
     except Exception as e:
         return JSONResponse({"ok":False,"error":str(e)},status_code=400)
 
