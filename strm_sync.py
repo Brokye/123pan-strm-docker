@@ -309,3 +309,130 @@ def sync_all_libraries(
         'total_errors': len(result['errors']),
     }
     return total_result
+
+
+# ==================== MD5(etag) 去重 ====================
+
+def _is_video(path: str) -> bool:
+    return Path(path).suffix.lower() in VIDEO_EXTS
+
+
+def _is_subtitle(path: str) -> bool:
+    return Path(path).suffix.lower() in SUBTITLE_EXTS
+
+
+def dedup_library(lib: Dict) -> Dict:
+    """单库内按 etag(MD5) 完全一致去重，返回待删清单（不执行删除）。
+
+    返回:
+      {
+        'lib_id': str, 'lib_name': str,
+        'video_groups': [{'etag','size','items':[file...],'keep':idx,'deletes':[idx...]}],
+        'sub_groups': [...],
+        'video_delete': [file...],   # 展平的待删视频
+        'sub_delete': [file...],     # 展平的待删字幕
+      }
+    """
+    lib_id = lib.get('id', '')
+    lib_name = lib.get('name', '')
+    files = lib.get('files', [])
+    # 按 etag 分组（视频 / 字幕分开）
+    video_by_etag: Dict[str, List[Dict]] = {}
+    sub_by_etag: Dict[str, List[Dict]] = {}
+    for f in files:
+        etag = str(f.get('etag') or '').strip()
+        path = str(f.get('path') or '')
+        if not etag or not path:
+            continue
+        if _is_video(path):
+            video_by_etag.setdefault(etag, []).append(f)
+        elif _is_subtitle(path):
+            sub_by_etag.setdefault(etag, []).append(f)
+
+    def _build_groups(groups: Dict[str, List[Dict]]) -> List[Dict]:
+        out = []
+        for etag, items in groups.items():
+            if len(items) < 2:
+                continue  # 无重复
+            # 全部文件列出（含 path/size/idx），由用户自由勾选删除
+            out.append({
+                'etag': etag,
+                'size': items[0].get('size', 0),
+                'count': len(items),
+                'files': [
+                    {'idx': f.get('idx', 0), 'path': str(f.get('path', '')), 'size': f.get('size', 0)}
+                    for f in items
+                ],
+            })
+        return out
+
+    video_groups = _build_groups(video_by_etag)
+    sub_groups = _build_groups(sub_by_etag)
+
+    video_count = sum(g['count'] for g in video_groups)
+    sub_count = sum(g['count'] for g in sub_groups)
+
+    return {
+        'lib_id': lib_id,
+        'lib_name': lib_name,
+        'video_groups': video_groups,
+        'sub_groups': sub_groups,
+        'video_dup_count': video_count,   # 涉及重复的视频文件总数
+        'sub_dup_count': sub_count,       # 涉及重复的字幕文件总数
+    }
+
+
+def dedup_scan_all() -> Dict:
+    """扫描全部库，返回去重清单（不执行删除）"""
+    from strm_app import list_libraries
+    libraries = list_libraries()
+    results = []
+    total_video = total_sub = 0
+    for info in libraries:
+        lib = load_lib(info['id'])
+        r = dedup_library(lib)
+        if r['video_groups'] or r['sub_groups']:
+            results.append(r)
+        total_video += r['video_dup_count']
+        total_sub += r['sub_dup_count']
+    return {
+        'libraries': results,
+        'total_video_dup': total_video,   # 涉及重复的视频文件总数
+        'total_sub_dup': total_sub,       # 涉及重复的字幕文件总数
+        'total_dup': total_video + total_sub,
+    }
+
+
+def dedup_apply(lib_id: str, delete_paths: List[str]) -> Dict:
+    """对指定库执行删除：从库 JSON 移除勾选的 path，删除前自动备份。
+
+    delete_paths: 用户勾选确认要删除的文件 path 列表
+    """
+    lib = load_lib(lib_id)
+    files = lib.get('files', [])
+    del_set = set(delete_paths or [])
+    keep = [f for f in files if str(f.get('path') or '') not in del_set]
+    removed = len(files) - len(keep)
+    if removed == 0:
+        return {'ok': True, 'lib_id': lib_id, 'removed': 0, 'message': '无删除项'}
+
+    # 备份原库 JSON
+    from strm_app import lib_path
+    import shutil, time as _t
+    p = lib_path(lib_id)
+    try:
+        bak = str(p) + f'.bak.{int(_t.time())}'
+        shutil.copy2(p, bak)
+    except Exception as e:
+        logger.warning(f"去重备份失败(忽略): {e}")
+
+    # 重建 idx 并写回
+    new_files = []
+    for i, f in enumerate(keep):
+        nf = dict(f)
+        nf['idx'] = i
+        new_files.append(nf)
+    lib['files'] = new_files
+    p.write_text(json.dumps(lib, ensure_ascii=False, indent=2), encoding='utf-8')
+
+    return {'ok': True, 'lib_id': lib_id, 'removed': removed, 'message': f'已删除 {removed} 个重复文件'}

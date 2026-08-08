@@ -1026,6 +1026,55 @@ body {
   justify-content: flex-end;
 }
 
+/* ==================== MD5 去重弹窗专用样式 ==================== */
+.dedup-modal { max-width: 680px; width: 92vw; max-height: 78vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; }
+.dedup-header { padding: 20px 24px 14px; border-bottom: 1px solid var(--input-border, #e5e7eb); }
+.dedup-toolbar { display: flex; align-items: center; gap: 12px; padding: 12px 24px; border-bottom: 1px solid var(--input-border, #e5e7eb); background: var(--bg-secondary, #fafafa); }
+.dedup-toolbar .dedup-count { flex: 1; font-size: 12px; color: var(--text-tertiary, #888); font-weight: 500; white-space: nowrap; }
+.dedup-list { flex: 1; overflow-y: auto; padding: 16px 24px; font-size: 13px; }
+.dedup-footer { display: flex; align-items: center; gap: 8px; padding: 14px 24px; border-top: 1px solid var(--input-border, #e5e7eb); background: var(--bg-secondary, #fafafa); }
+.dedup-footer .dedup-progress { flex: 1; font-size: 12px; color: var(--text-tertiary, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.dedup-lib-title { margin: 14px 0 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary, #444); display: flex; align-items: center; gap: 6px; }
+.dedup-lib-title:first-child { margin-top: 0; }
+
+.dedup-card { border: 1px solid var(--input-border, #e8e8e8); border-radius: 12px; margin: 0 0 12px; overflow: hidden; background: #fff; }
+.dedup-card-head { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--input-border, #f0f0f0); }
+.dedup-card-tag { font-size: 12px; font-weight: 600; white-space: nowrap; }
+.dedup-card-tag.video { color: #b45309; }
+.dedup-card-tag.sub { color: #1d4ed8; }
+.dedup-card-meta { font-size: 12px; color: var(--text-tertiary, #888); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dedup-card-head .dedup-group-select { margin-left: auto; display: flex; align-items: center; gap: 5px; font-size: 12px; white-space: nowrap; cursor: pointer; }
+
+.dedup-file { display: flex; align-items: center; gap: 10px; padding: 9px 14px; cursor: pointer; transition: background 0.15s; }
+.dedup-file:hover { background: var(--bg-hover, #f5f5f5); }
+.dedup-file input[type="checkbox"] { margin: 0; flex-shrink: 0; }
+.dedup-file-path { flex: 1; min-width: 0; font-size: 13px; color: var(--text-primary, #222); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dedup-file-size { flex-shrink: 0; font-size: 12px; color: var(--text-tertiary, #888); font-variant-numeric: tabular-nums; }
+
+/* 一键选重复项 按钮样式 */
+.dedup-sm-btn {
+  border: 1px solid var(--input-border, #d8d8d8);
+  background: #fff;
+  color: var(--text-secondary, #555);
+  border-radius: 8px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.dedup-sm-btn:hover { border-color: #c0c0c0; background: #f8f8f8; }
+.dedup-sm-btn.active { border-color: #dc2626; color: #dc2626; background: rgba(220, 38, 38, 0.06); }
+.dedup-sm-btn.danger-solid { border: none; background: #dc2626; color: #fff; border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+.dedup-sm-btn.danger-solid:hover { background: #b91c1c; }
+.dedup-sm-btn.danger-solid:disabled { background: #e5e7eb; color: #9ca3af; cursor: not-allowed; }
+
+
 .modal-actions-left,
 .modal-actions-right {
   display: flex;
@@ -1672,6 +1721,14 @@ body {
             </svg>
             同步 STRM
           </button>
+          <button class="vp-btn warning sm" onclick="openDedup()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+              <circle cx="12" cy="12" r="3"/>
+              <line x1="4" y1="4" x2="20" y2="20"/>
+            </svg>
+            去重
+          </button>
         </div>
         <input type="file" id="restoreInput" accept=".json" class="hidden-input">
         
@@ -1823,6 +1880,33 @@ body {
           <button class="vp-btn primary sm" onclick="panExport('download')">导出秒传 json</button>
         </div>
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dedupDlg">
+  <div class="vp-modal dedup-modal">
+    <div class="modal-header dedup-header">
+      <div class="modal-icon" style="background:rgba(220,38,38,.10);color:#dc2626">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18">
+          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+          <circle cx="12" cy="12" r="3"/>
+        </svg>
+      </div>
+      <div>
+        <h3 class="modal-title">MD5 重复文件去重</h3>
+        <p class="modal-desc" style="margin-bottom:0">勾选需要删除的重复文件，每组默认保留 1 份</p>
+      </div>
+    </div>
+    <div class="dedup-toolbar">
+      <button class="dedup-sm-btn" id="dedupSelectAllBtn" onclick="dedupToggleAll(this)">一键选重复项</button>
+      <span class="dedup-count" id="dedupCount">扫描中...</span>
+      <button class="dedup-sm-btn" onclick="closeDedup()">取消</button>
+      <button class="dedup-sm-btn danger-solid" id="dedupOkBtn" onclick="dedupApply()" disabled>删除选中</button>
+    </div>
+    <div id="dedupList" class="dedup-list"></div>
+    <div class="dedup-footer">
+      <span class="dedup-progress" id="dedupProgress"></span>
     </div>
   </div>
 </div>
@@ -2603,6 +2687,246 @@ async function syncAllSTRM() {
   } finally {
     syncAllBusy = false;
   }
+}
+
+// ==================== MD5 去重 ====================
+var dedupData = null;   // scan 结果
+var dedupChecked = {};  // 勾选状态: "libId|path" -> true
+
+function openDedup() {
+  document.getElementById('dedupDlg').classList.add('show');
+  document.getElementById('dedupCount').textContent = '扫描中...';
+  document.getElementById('dedupList').innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-tertiary, #888)">正在扫描所有库的重复文件...</div>';
+  document.getElementById('dedupOkBtn').disabled = true;
+  document.getElementById('dedupOkBtn').textContent = '删除选中';
+  var allBtn = document.getElementById('dedupSelectAllBtn');
+  if (allBtn) allBtn.classList.remove('active');
+  dedupChecked = {};
+  dedupGroupActive = {};
+  api('/api/dedup/scan', { method: 'POST' }).then(function(d) {
+    dedupData = d;
+    renderDedupList();
+  }).catch(function(e) {
+    document.getElementById('dedupList').innerHTML = '<div style="padding:20px;text-align:center;color:red">扫描失败: ' + esc(e.message || e) + '</div>';
+    document.getElementById('dedupCount').textContent = '扫描失败';
+  });
+}
+
+function closeDedup() {
+  document.getElementById('dedupDlg').classList.remove('show');
+  dedupData = null;
+  dedupChecked = {};
+  dedupGroupActive = {};
+}
+
+function escDedupPath(p) {
+  return esc(p);
+}
+
+function renderDedupList() {
+  var d = dedupData;
+  var el = document.getElementById('dedupList');
+  if (!d || !d.libraries || !d.libraries.length) {
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-tertiary, #888)">🎉 未发现 MD5 完全相同的重复文件</div>';
+    document.getElementById('dedupCount').textContent = '未发现重复 (0 个)';
+    updateDedupOk();
+    return;
+  }
+  var h = '';
+  d.libraries.forEach(function(lib) {
+    var libGroups = (lib.video_groups || []).concat(lib.sub_groups || []);
+    if (!libGroups.length) return;
+    h += '<div class="dedup-lib-title">📚 ' + esc(lib.lib_name) + ' <span style="font-weight:400;color:var(--text-tertiary,#888)">(' + esc(lib.lib_id) + ')</span></div>';
+    // 视频重复组
+    (lib.video_groups || []).forEach(function(g) {
+      // 该组是否处于"选重复项"激活态（勾选了第2个及以后的文件）
+      var gkey = lib.lib_id + '|' + g.etag;
+      var hasLater = g.files.slice(1).some(function(f) { return dedupChecked[lib.lib_id + '|' + f.path]; });
+      var gActive = dedupGroupActive[gkey] === true || hasLater;
+      h += '<div class="dedup-card">' +
+        '<div class="dedup-card-head">' +
+          '<span class="dedup-card-tag video">🎬 重复视频</span>' +
+          '<span class="dedup-card-meta" title="etag ' + escAttr(g.etag) + '">etag ' + esc(g.etag) + ' · ' + g.count + ' 个文件 · 单文件 ' + fmtSize(g.size) + '</span>' +
+          '<label class="dedup-group-select" style="color:#16a34a;font-weight:' + (gActive ? 600 : 400) + '"><input type="checkbox" ' + (gActive ? 'checked' : '') + ' onchange="dedupToggleGroup(this,\'' + escAttr(lib.lib_id) + '\',\'' + escAttr(g.etag) + '\')"> 本组选重复项</label>' +
+        '</div>';
+      g.files.forEach(function(f) {
+        var key = lib.lib_id + '|' + f.path;
+        h += '<label class="dedup-file" title="' + escAttr(f.path) + '">' +
+          '<input type="checkbox" data-key="' + escAttr(key) + '" ' + (dedupChecked[key] ? 'checked' : '') + ' onchange="dedupOnChange(this)">' +
+          '<span class="dedup-file-path">' + escDedupPath(f.path) + '</span>' +
+          '<span class="dedup-file-size">' + fmtSize(f.size) + '</span>' +
+        '</label>';
+      });
+      h += '</div>';
+    });
+    // 字幕重复组
+    (lib.sub_groups || []).forEach(function(g) {
+      var gkey = lib.lib_id + '|' + g.etag;
+      var hasLater = g.files.slice(1).some(function(f) { return dedupChecked[lib.lib_id + '|' + f.path]; });
+      var gActive = dedupGroupActive[gkey] === true || hasLater;
+      h += '<div class="dedup-card">' +
+        '<div class="dedup-card-head">' +
+          '<span class="dedup-card-tag sub">📝 重复字幕</span>' +
+          '<span class="dedup-card-meta" title="etag ' + escAttr(g.etag) + '">etag ' + esc(g.etag) + ' · ' + g.count + ' 个文件</span>' +
+          '<label class="dedup-group-select" style="color:#1d4ed8;font-weight:' + (gActive ? 600 : 400) + '"><input type="checkbox" ' + (gActive ? 'checked' : '') + ' onchange="dedupToggleGroup(this,\'' + escAttr(lib.lib_id) + '\',\'' + escAttr(g.etag) + '\')"> 本组选重复项</label>' +
+        '</div>';
+      g.files.forEach(function(f) {
+        var key = lib.lib_id + '|' + f.path;
+        h += '<label class="dedup-file" title="' + escAttr(f.path) + '">' +
+          '<input type="checkbox" data-key="' + escAttr(key) + '" ' + (dedupChecked[key] ? 'checked' : '') + ' onchange="dedupOnChange(this)">' +
+          '<span class="dedup-file-path">' + escDedupPath(f.path) + '</span>' +
+          '<span class="dedup-file-size">' + fmtSize(f.size) + '</span>' +
+        '</label>';
+      });
+      h += '</div>';
+    });
+  });
+  el.innerHTML = h;
+  updateDedupCount();
+  updateDedupOk();
+}
+
+// 组内"选重复项/取消"（按钮式）：勾选时保留组内第 1 个文件，仅勾选第 2 个及以后
+var dedupGroupActive = {};  // "libId|etag" -> bool，记录组按钮激活态
+
+function dedupToggleGroup(cb, libId, etag) {
+  if (!dedupData) return;
+  var gkey = libId + '|' + etag;
+  var checked = cb.checked;
+  dedupGroupActive[gkey] = checked;
+  dedupData.libraries.forEach(function(lib) {
+    if (lib.lib_id !== libId) return;
+    var groups = (lib.video_groups || []).concat(lib.sub_groups || []);
+    groups.forEach(function(g) {
+      if (g.etag !== etag) return;
+      g.files.forEach(function(f, idx) {
+        var key = lib.lib_id + '|' + f.path;
+        if (checked) {
+          // 智能勾选：第 1 个保留不勾，其余勾选
+          if (idx > 0) dedupChecked[key] = true;
+          else delete dedupChecked[key];
+        } else {
+          delete dedupChecked[key];
+        }
+      });
+    });
+  });
+  renderDedupList();
+}
+
+function dedupOnChange(cb) {
+  if (cb.checked) dedupChecked[cb.getAttribute('data-key')] = true;
+  else delete dedupChecked[cb.getAttribute('data-key')];
+  updateDedupCount();
+  updateDedupOk();
+}
+function updateDedupCount() {
+  var n = Object.keys(dedupChecked).length;
+  var total = dedupData ? dedupData.total_dup : 0;
+  document.getElementById('dedupCount').textContent = '重复文件共 ' + total + ' 个，已选 ' + n + ' 个';
+}
+
+// 全局"一键选重复项/取消"（按钮式）：遍历所有分组，每组保留第 1 个，仅勾选其余重复项
+function dedupToggleAll(btn) {
+  if (!dedupData) return;
+  var active = !btn.classList.contains('active');
+  dedupChecked = {};
+  dedupGroupActive = {};
+  if (active) {
+    dedupData.libraries.forEach(function(lib) {
+      (lib.video_groups || []).forEach(function(g) {
+        g.files.forEach(function(f, idx) {
+          if (idx > 0) dedupChecked[lib.lib_id + '|' + f.path] = true;
+        });
+        dedupGroupActive[lib.lib_id + '|' + g.etag] = true;
+      });
+      (lib.sub_groups || []).forEach(function(g) {
+        g.files.forEach(function(f, idx) {
+          if (idx > 0) dedupChecked[lib.lib_id + '|' + f.path] = true;
+        });
+        dedupGroupActive[lib.lib_id + '|' + g.etag] = true;
+      });
+    });
+  }
+  btn.classList.toggle('active', active);
+  renderDedupList();
+}
+
+function updateDedupOk() {
+  var n = Object.keys(dedupChecked).length;
+  var btn = document.getElementById('dedupOkBtn');
+  btn.disabled = n === 0;
+  btn.textContent = n > 0 ? ('删除选中 (' + n + ')') : '删除选中';
+}
+
+function dedupApply() {
+  var keys = Object.keys(dedupChecked);
+  if (!keys.length) return;
+
+  // ===== 防错兜底：检测是否有分组被"全选"（组内所有文件均被勾选）=====
+  if (dedupData) {
+    var fullySelected = [];
+    dedupData.libraries.forEach(function(lib) {
+      var groups = (lib.video_groups || []).concat(lib.sub_groups || []);
+      groups.forEach(function(g) {
+        var allChecked = g.files.every(function(f) {
+          return dedupChecked[lib.lib_id + '|' + f.path];
+        });
+        if (allChecked) {
+          fullySelected.push(lib.lib_name + ' / ' + g.etag);
+        }
+      });
+    });
+    if (fullySelected.length) {
+      toast('检测到部分分组所有文件均被勾选，删除将导致文件丢失，请每组至少保留一份。', 'error');
+      return;
+    }
+  }
+
+  // 按库分组
+  var byLib = {};
+  keys.forEach(function(k) {
+    var i = k.indexOf('|');
+    var lid = k.substring(0, i), p = k.substring(i + 1);
+    if (!byLib[lid]) byLib[lid] = [];
+    byLib[lid].push(p);
+  });
+  var total = keys.length;
+  confirmDialog('确认删除选中的 <b>' + total + '</b> 个重复文件？<br><span style="font-size:12px;color:var(--text-tertiary, #888)">仅移除库内记录，不影响磁盘文件；删除前自动备份库 JSON</span>', { ok: '确认删除', title: 'MD5 去重确认' }, async function() {
+    var done = 0, errs = [];
+    var prog = document.getElementById('dedupProgress');
+    for (var lid in byLib) {
+      try {
+        prog.textContent = '正在处理 ' + lid + ' ...';
+        var r = await api('/api/dedup/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lib_id: lid, delete_paths: byLib[lid] })
+        });
+        if (r.ok) done += (r.removed || 0);
+        else errs.push(lid + ': ' + r.message);
+      } catch(e) {
+        errs.push(lid + ': ' + (e.message || e));
+      }
+    }
+    prog.textContent = '';
+    toast('去重完成：删除 ' + done + ' 个重复文件' + (errs.length ? '，' + errs.length + ' 个库失败' : ''), errs.length ? 'error' : 'success');
+    log('✓ MD5 去重：删除 ' + done + ' 个' + (errs.length ? '\n失败: ' + errs.join('\n') : ''));
+    closeDedup();
+    loadLibs();
+  });
+}
+
+function fmtSize(b) {
+  b = parseInt(b) || 0;
+  if (b >= 1073741824) return (b / 1073741824).toFixed(2) + ' GB';
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+  if (b >= 1024) return (b / 1024).toFixed(1) + ' KB';
+  return b + ' B';
+}
+
+function escAttr(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function delLib(id) {
