@@ -37,8 +37,6 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository_owner }}/123pan-strm-docker
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=beta,enable={{is_ref_regex:refs/heads/beta}}
             type=sha,prefix=sha-
             type=ref,event=tag
 
@@ -48,7 +46,10 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/123pan-strm-docker:sha-${{ github.sha }}
+            ${{ github.ref == 'refs/heads/beta' && format('ghcr.io/{0}/123pan-strm-docker:beta', github.repository_owner) || '' }}
+            ${{ github.ref == 'refs/heads/main' && format('ghcr.io/{0}/123pan-strm-docker:latest', github.repository_owner) || '' }}
           labels: ${{ steps.meta.outputs.labels }}
 
   dockerhub:
@@ -79,8 +80,6 @@ jobs:
         with:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/123pan-strm-docker
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
-            type=raw,value=beta,enable={{is_ref_regex:refs/heads/beta}}
             type=sha,prefix=sha-
             type=ref,event=tag
 
