@@ -2,7 +2,7 @@ name: Build and publish Docker image
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "beta"]
     tags: ["v*"]
   workflow_dispatch:
 
@@ -38,6 +38,7 @@ jobs:
           images: ghcr.io/${{ github.repository_owner }}/123pan-strm-docker
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=beta,enable={{is_ref_regex:refs/heads/beta}}
             type=sha,prefix=sha-
             type=ref,event=tag
 
@@ -79,6 +80,7 @@ jobs:
           images: ${{ secrets.DOCKERHUB_USERNAME }}/123pan-strm-docker
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=beta,enable={{is_ref_regex:refs/heads/beta}}
             type=sha,prefix=sha-
             type=ref,event=tag
 

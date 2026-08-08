@@ -268,6 +268,14 @@ def generate_strm_task(lib_id, output_dir, server_base, include_subtitles=False)
     yield {"result": {"count": count, "subtitles": subtitles, "skipped": skipped,
                       "output_dir": str(out_root), "examples": examples}}
 
+def sync_all_strm_task(output_dir, server_base, include_subtitles=False):
+    """同步所有库的 STRM：删除多余的，生成缺失的（带进度）"""
+    from strm_sync import sync_all_libraries
+    yield {"message": "准备同步所有库...", "progress": 0}
+    result = sync_all_libraries(output_dir, server_base, include_subtitles)
+    yield {"message": f"同步完成: 删除 {result['total_to_delete_strm']} 个, 生成 {result['total_to_create_strm']} 个",
+           "progress": 100, "result": result}
+
 def safe_name(s:str)->str:
     s=str(s or '').replace('\x00','')
     for c in BAD_CHARS: s=s.replace(c,' ')
@@ -407,7 +415,7 @@ def generate_strm(lib_id:str,output_dir:str,server_base:str,include_subtitles=Fa
 
 class SaveReq(BaseModel): name:str=''; content:Any; category:str=''
 class ModeReq(BaseModel): mode:str='cache'
-class GenReq(BaseModel): lib_id:str; output_dir:str=''; server_base:str=''; include_subtitles:bool=False
+class GenReq(BaseModel): lib_id:Optional[str]=''; output_dir:str=''; server_base:str=''; include_subtitles:bool=False
 class ConfigReq(BaseModel): output_dir:str=''; server_base:str=''; include_subtitles:bool=False; pan_username:str=''; pan_password:str=''
 class UpdateLibReq(BaseModel): name:str=''; category:str=''; files:Any=None; commonPath:Optional[str]=None
 class PanExportReq(BaseModel): folders:List[Dict[str,Any]]=[]; files:List[Dict[str,Any]]=[]
@@ -480,6 +488,17 @@ def api_generate(req:GenReq):
         task_id=start_task("generate",generate_strm_task(req.lib_id,out,base,req.include_subtitles))
         return {"ok":True,"task_id":task_id}
     except Exception as e: return JSONResponse({"ok":False,"error":str(e)},status_code=400)
+
+@app.post('/api/sync/all')
+def api_sync_all_strm(req:Optional[GenReq]=None):
+    """同步所有库的 STRM 文件：删除多余的，生成缺失的"""
+    try:
+        task_id=start_task("sync_all",sync_all_strm_task(req.output_dir if req else None,
+                                                          req.server_base if req else None,
+                                                          req.include_subtitles if req else False))
+        return {"ok":True,"task_id":task_id}
+    except Exception as e:
+        return JSONResponse({"ok":False,"error":str(e)},status_code=400)
 
 @app.get('/api/pan/list')
 def api_pan_list(parentFileId:int=0):

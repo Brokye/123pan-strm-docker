@@ -1663,6 +1663,15 @@ body {
             </svg>
             导入恢复
           </button>
+          <button class="vp-btn success sm" onclick="syncAllSTRM()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="12" height="12">
+              <path d="M23 4v6h-6"/>
+              <path d="M1 20v-6h6"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/>
+              <path d="M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            同步 STRM
+          </button>
         </div>
         <input type="file" id="restoreInput" accept=".json" class="hidden-input">
         
@@ -1851,7 +1860,7 @@ var panRootLoaded = false;
 var panBusy = false;
 var panSecJson = null;
 var panStep = 1;
-var genSTRMBusy = false;
+var syncAllBusy = false;
 var confirmCb = null;
 var expandedLibs = {};
 var ddValues = { ddLibCat: '', ddMergeCat: '' };
@@ -2179,7 +2188,6 @@ function _itemHtml(x) {
       '<span>ID: ' + esc(x.id) + '</span>' +
     '</div>' +
     '<div class="lib-actions">' +
-      '<button class="vp-btn primary sm" onclick="genSTRM(\'' + esc(x.id) + '\')">生成 STRM</button>' +
       '<button class="vp-btn secondary sm" onclick="toggleLib(\'' + esc(x.id) + '\',this)">展开文件</button>' +
       '<button class="vp-btn secondary sm" onclick="askRename(\'' + esc(x.id) + '\',\'' + esc(x.name) + '\')">重命名</button>' +
       '<button class="vp-btn secondary sm" onclick="askMerge(\'' + esc(x.id) + '\',\'' + esc(cat) + '\')">改分类</button>' +
@@ -2542,28 +2550,31 @@ async function mergeCat(cat) {
   });
 }
 
-async function genSTRM(id) {
-  if (genSTRMBusy) return;
-  var o = document.getElementById('outDir').value, s = document.getElementById('srvBase').value;
-  genSTRMBusy = true;
+async function syncAllSTRM() {
+  if (syncAllBusy) return;
+  syncAllBusy = true;
   try {
-    setProgress('gen', true, 0, '正在准备生成 STRM...');
-    var j = await api('/api/generate', {
+    setProgress('gen', true, 0, '正在准备同步 STRM 与字幕...');
+    var j = await api('/api/sync/all', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lib_id: id, output_dir: o, server_base: s, include_subtitles: true })
+      body: JSON.stringify({ include_subtitles: true })
     });
     var res = await pollTask(j.task_id, function(u) {
       setProgress('gen', true, u.progress || 0, u.message || '');
     });
     setProgress('gen', false);
-    log('✓ 完成：' + res.result.count + ' STRM' + (res.result.subtitles ? ', ' + res.result.subtitles + ' 字幕' : '') + '\n输出：' + res.result.output_dir + '\n' + res.result.examples.slice(0, 5).join('\n'));
-    toast('生成 STRM 完成：' + res.result.count + ' 个文件', 'success');
+    var r = res.result || {};
+    var msg = '删除 ' + (r.total_deleted_strm || 0) + ' 个多余 STRM，生成 ' + (r.total_created_strm || 0) + ' 个缺失 STRM';
+    msg += '，下载字幕 ' + (r.total_created_subs || 0) + ' 个';
+    if (r.total_errors) msg += '，错误 ' + r.total_errors + ' 个';
+    log('✓ ' + msg);
+    toast(msg, 'success');
   } catch(e) {
     setProgress('gen', false);
     toast(e.message, 'error');
   } finally {
-    genSTRMBusy = false;
+    syncAllBusy = false;
   }
 }
 
