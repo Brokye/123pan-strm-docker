@@ -51,6 +51,8 @@ jobs:
             ${{ github.ref == 'refs/heads/beta' && format('ghcr.io/{0}/123pan-strm-docker:beta', github.repository_owner) || '' }}
             ${{ github.ref == 'refs/heads/main' && format('ghcr.io/{0}/123pan-strm-docker:latest', github.repository_owner) || '' }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   dockerhub:
     name: Build and push to Docker Hub
@@ -91,3 +93,5 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
