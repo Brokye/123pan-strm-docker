@@ -80,16 +80,13 @@ func WriteYAMLFile(p string, m map[string]any) {
 		}
 		node.Content = append(node.Content, kn, vn)
 	}
-	enc := yaml.NewEncoder(&bytes.Buffer{})
-	enc.SetIndent(2)
 	var buf bytes.Buffer
-	enc2 := yaml.NewEncoder(&buf)
-	enc2.SetIndent(2)
-	if err := enc2.Encode(node); err == nil {
+	enc := yaml.NewEncoder(&buf)
+	enc.SetIndent(2)
+	if err := enc.Encode(node); err == nil {
 		os.WriteFile(p, buf.Bytes(), 0o644)
 	}
 	enc.Close()
-	enc2.Close()
 }
 
 func toYAMLNode(v any) (*yaml.Node, error) {
@@ -150,13 +147,4 @@ func strconvItoa(n int64) string {
 func parseInt(s string) int64 {
 	n, _ := strconv.ParseInt(s, 10, 64)
 	return n
-}
-
-func fmtSscanfInt(s string, n *int) (int, error) {
-	v, err := strconv.Atoi(s)
-	if err != nil {
-		return 0, err
-	}
-	*n = v
-	return 1, nil
 }

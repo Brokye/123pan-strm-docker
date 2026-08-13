@@ -2,6 +2,7 @@ package app
 
 import (
 	"fmt"
+	"log"
 	"os"
 	"path/filepath"
 	"strings"
@@ -161,6 +162,7 @@ func (a *App) syncCore(expectedStrm, expectedSubs map[string]bool, strmMap, subM
 			result["errors"] = append(result["errors"].([]string), "删除 STRM 失败 "+f+": "+err.Error())
 		} else {
 			result["deleted_strm"] = append(result["deleted_strm"].([]string), relOf(f))
+			log.Printf("[同步] 删除 STRM: %s", relOf(f))
 		}
 	}
 
@@ -170,6 +172,7 @@ func (a *App) syncCore(expectedStrm, expectedSubs map[string]bool, strmMap, subM
 			result["errors"] = append(result["errors"].([]string), "删除字幕失败 "+f+": "+err.Error())
 		} else {
 			result["deleted_subs"] = append(result["deleted_subs"].([]string), relOf(f))
+			log.Printf("[同步] 删除字幕: %s", relOf(f))
 		}
 	}
 
@@ -356,6 +359,18 @@ func (a *App) syncAllLibraries(outputDir, serverBase string, includeSubtitles bo
 
 	expectedStrm, expectedSubs, strmMap, subMap := collectExpected(allLibs, outputDir, includeSubtitles)
 	result := a.syncCore(expectedStrm, expectedSubs, strmMap, subMap, outputDir, serverBase, includeSubtitles, false, "all", outRootDir)
+
+	log.Printf("[同步] 完成: 删除 STRM %d 个 / 字幕 %d 个, 生成 STRM %d 个 / 字幕 %d 个, 错误 %d 个",
+		len(result["deleted_strm"].([]string)),
+		len(result["deleted_subs"].([]string)),
+		len(result["created_strm"].([]string)),
+		len(result["created_subs"].([]string)),
+		len(result["errors"].([]string)))
+	if errs := result["errors"].([]string); len(errs) > 0 {
+		for _, e := range errs {
+			log.Printf("[同步] 错误: %s", e)
+		}
+	}
 
 	return map[string]any{
 		"libraries":            result,

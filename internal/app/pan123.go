@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
 	"net/http"
 	"net/url"
@@ -107,8 +108,9 @@ func (p *Pan123) doLogin(username, password string) bool {
 	}
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
-	var rd map[string]any
-	if err := json.Unmarshal(data, &rd); err != nil {
+	rd, err := parseJSONBody(data)
+	if err != nil {
+		log.Printf("[123] 登录响应解析失败: %s", err)
 		return false
 	}
 	var token string
@@ -118,8 +120,10 @@ func (p *Pan123) doLogin(username, password string) bool {
 	if token != "" {
 		p.accessToken = token
 		p.headers["authorization"] = "Bearer " + token
+		log.Printf("[123] 登录成功")
 		return true
 	}
+	log.Printf("[123] 登录失败: %s", truncate(string(data), 200))
 	p.accessToken = ""
 	return false
 }
@@ -169,9 +173,10 @@ func (p *Pan123) doRequest(method, actionURL string, params url.Values, jsonBody
 	}
 	defer resp.Body.Close()
 	b, _ := io.ReadAll(resp.Body)
-	var rd map[string]any
-	if err := json.Unmarshal(b, &rd); err != nil {
-		return nil, fmt.Errorf("invalid json response: %s", string(b))
+	rd, err := parseJSONBody(b)
+	if err != nil {
+		log.Printf("[123] API 响应解析失败 %s %s: %s", method, actionURL, err)
+		return nil, err
 	}
 	return rd, nil
 }
@@ -269,9 +274,11 @@ func (p *Pan123) createFolder(parentFileId int64, folderName string, rawData boo
 		}
 		info, _ := rd["data"].(map[string]any)["Info"].(map[string]any)
 		fileId, _ := info["FileId"].(float64)
+		log.Printf("[123] 创建文件夹成功: %s, fileId=%d", folderName, int64(fileId))
 		return map[string]any{"isFinish": true, "message": int64(fileId)}
 	}
 	b, _ := json.Marshal(rd)
+	log.Printf("[123] 创建文件夹失败: %s: %s", folderName, truncate(string(b), 200))
 	return map[string]any{"isFinish": false, "message": "创建文件夹失败：" + string(b)}
 }
 
@@ -295,9 +302,11 @@ func (p *Pan123) uploadFile(etag, fileName string, parentFileId int64, size int6
 		}
 		info, _ := rd["data"].(map[string]any)["Info"].(map[string]any)
 		fileId, _ := info["FileId"].(float64)
+		log.Printf("[123] 秒传上传成功: %s, fileId=%d", fileName, int64(fileId))
 		return map[string]any{"isFinish": true, "message": int64(fileId)}
 	}
 	b, _ := json.Marshal(rd)
+	log.Printf("[123] 秒传上传失败: %s: %s", fileName, truncate(string(b), 200))
 	return map[string]any{"isFinish": false, "message": "上传文件失败：" + string(b)}
 }
 
@@ -321,6 +330,7 @@ func (p *Pan123) downloadFile(etag string, fileId int64, s3keyFlag string, typ i
 		return map[string]any{"isFinish": true, "message": url}
 	}
 	b, _ := json.Marshal(rd)
+	log.Printf("[123] 获取下载链接失败: %s: %s", fileName, truncate(string(b), 200))
 	return map[string]any{"isFinish": false, "message": "获取文件下载链接失败：" + string(b)}
 }
 
@@ -338,6 +348,7 @@ func (p *Pan123) deleteFile(fileList []map[string]any, clearTrash bool) map[stri
 	}
 	if code, _ := rd["code"].(float64); code == 0 {
 		if !clearTrash {
+			log.Printf("[123] 移入回收站成功: %d 个文件", len(fileList))
 			return map[string]any{"isFinish": true, "message": "删除文件成功"}
 		}
 		deleteIdList := []map[string]any{}
@@ -355,11 +366,14 @@ func (p *Pan123) deleteFile(fileList []map[string]any, clearTrash bool) map[stri
 			return map[string]any{"isFinish": false, "message": "彻底删除文件请求发生异常: " + err.Error()}
 		}
 		if code2, _ := rd2["code"].(float64); code2 == 7301 {
+			log.Printf("[123] 彻底删除成功: %d 个文件", len(fileList))
 			return map[string]any{"isFinish": true, "message": "彻底删除文件成功"}
 		}
 		b, _ := json.Marshal(rd2)
+		log.Printf("[123] 彻底删除失败: %s", truncate(string(b), 200))
 		return map[string]any{"isFinish": false, "message": "彻底删除文件失败：" + string(b)}
 	}
 	b, _ := json.Marshal(rd)
+	log.Printf("[123] 删除文件失败: %s", truncate(string(b), 200))
 	return map[string]any{"isFinish": false, "message": "删除文件失败：" + string(b)}
 }

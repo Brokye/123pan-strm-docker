@@ -6,8 +6,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 )
@@ -72,6 +72,7 @@ func (a *App) getFileURLOnce(name, etag string, size int64, fastMode bool) strin
 	}
 	if driver.getAccessToken() == "" {
 		if !driver.doLogin(username, password) {
+			log.Printf("[播放] 登录失败，返回占位链接: %s", name)
 			return "http://222.186.21.40:33333/NGGYU.mp4"
 		}
 		cacheData["accessToken"] = driver.getAccessToken()
@@ -82,6 +83,7 @@ func (a *App) getFileURLOnce(name, etag string, size int64, fastMode bool) strin
 
 	actionResult := driver.createFolder(0, "__缓存目录_无视即可_24h自动清理__123Pan-Unlimited-WebDAV", true)
 	if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+		log.Printf("[播放] 创建缓存目录失败: %v", actionResult["message"])
 		return "http://222.186.21.40:33333/NGGYU.mp4"
 	}
 	cacheFolderInfo, _ := actionResult["message"].(map[string]any)
@@ -93,6 +95,7 @@ func (a *App) getFileURLOnce(name, etag string, size int64, fastMode bool) strin
 
 	actionResult = driver.uploadFile(etag, name, cacheFolderId, size, true)
 	if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+		log.Printf("[播放] 秒传上传失败: %s: %v", name, actionResult["message"])
 		return "http://222.186.21.40:33333/NGGYU.mp4"
 	}
 	fileData, _ := actionResult["message"].(map[string]any)
@@ -107,6 +110,7 @@ func (a *App) getFileURLOnce(name, etag string, size int64, fastMode bool) strin
 		int64(asFloat(fileInfo["Size"])),
 	)
 	if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+		log.Printf("[播放] 获取下载链接失败: %s: %v", name, actionResult["message"])
 		return "http://222.186.21.40:33333/NGGYU.mp4"
 	}
 	downloadLink, _ := actionResult["message"].(string)
@@ -120,8 +124,10 @@ func (a *App) getFileURLOnce(name, etag string, size int64, fastMode bool) strin
 	if time.Now().Unix()-int64(lastDel) > 24*60*60 {
 		actionResult = driver.deleteFile([]map[string]any{cacheFolderInfo2}, true)
 		if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+			log.Printf("[播放] 24h清理删除缓存目录失败: %v", actionResult["message"])
 			return "http://222.186.21.40:33333/NGGYU.mp4"
 		}
+		log.Printf("[播放] 24h清理：已彻底删除缓存目录 fileId=%d", cacheFolderId)
 		cacheData["lastDeleteTime"] = float64(time.Now().Unix())
 		WriteJSONFile(a.cfg.CachePath, cacheData)
 	}
@@ -180,10 +186,17 @@ func (a *App) getFileURLOnce(name, etag string, size int64, fastMode bool) strin
 	if fastMode {
 		go func(driver *Pan123, fileInfo map[string]any, name string) {
 			time.Sleep(60 * time.Second)
-			driver.deleteFile([]map[string]any{fileInfo}, true)
+			log.Printf("[播放] 入库模式：删除临时文件 %s", name)
+			res := driver.deleteFile([]map[string]any{fileInfo}, true)
+			if isFinish, _ := res["isFinish"].(bool); isFinish {
+				log.Printf("[播放] 入库模式：临时文件 %s 已删除", name)
+			} else {
+				log.Printf("[播放] 入库模式：删除临时文件 %s 失败: %v", name, res["message"])
+			}
 		}(driver, fileInfo, name)
 	}
 
+	log.Printf("[播放] 获取到 %s 的真实 URL: %s", name, finalURL)
 	return finalURL
 }
 
@@ -219,9 +232,4 @@ func asFloat(v any) float64 {
 		return float64(t)
 	}
 	return 0
-}
-
-func fileExists(p string) bool {
-	_, err := os.Stat(p)
-	return err == nil
 }

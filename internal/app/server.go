@@ -77,7 +77,7 @@ func (a *App) handler() http.Handler {
 	mux.HandleFunc("/api/libraries", a.handleLibraries)
 	mux.HandleFunc("/api/libraries/", a.handleLibraryItem)
 	mux.HandleFunc("/api/generate", a.handleGenerate)
-	mux.HandleFunc("/api/strm/sync", a.handleSyncAll)
+	mux.HandleFunc("/api/sync/all", a.handleSyncAll)
 	mux.HandleFunc("/api/dedup/scan", a.handleDedupScan)
 	mux.HandleFunc("/api/dedup/apply", a.handleDedupApply)
 	mux.HandleFunc("/api/pan/list", a.handlePanList)

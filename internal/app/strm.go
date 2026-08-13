@@ -3,6 +3,7 @@ package app
 import (
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -22,6 +23,7 @@ func (a *App) downloadSubtitleFile(fileInfo map[string]any, targetPath string, f
 	name := filepath.Base(asString(fileInfo["path"]))
 	url := a.getFileURLWithEtagCandidates(name, asString(fileInfo["etag"]), firstInt64(fileInfo, "size"), fastMode)
 	if url == "" || strings.Contains(url, "222.186.21.40:33333/NGGYU.mp4") {
+		log.Printf("[字幕] 获取直链失败，跳过: %s", name)
 		return false
 	}
 	client := &http.Client{Timeout: 30 * time.Second}
@@ -29,6 +31,7 @@ func (a *App) downloadSubtitleFile(fileInfo map[string]any, targetPath string, f
 	req.Header.Set("Referer", "https://yun.123pan.com/")
 	resp, err := client.Do(req)
 	if err != nil {
+		log.Printf("[字幕] 下载失败: %s: %v", name, err)
 		return false
 	}
 	defer resp.Body.Close()
@@ -39,8 +42,10 @@ func (a *App) downloadSubtitleFile(fileInfo map[string]any, targetPath string, f
 		}
 		os.MkdirAll(filepath.Dir(targetPath), 0o755)
 		os.WriteFile(targetPath, b, 0o644)
+		log.Printf("[字幕] 已下载: %s", targetPath)
 		return true
 	}
+	log.Printf("[字幕] 下载状态异常 %d: %s", resp.StatusCode, name)
 	return false
 }
 
@@ -136,6 +141,8 @@ func (a *App) generateStrmTask(libID, outputDir, serverBase string, includeSubti
 			"output_dir": outRoot,
 			"examples":   examples,
 		}})
+		log.Printf("[生成] 库 %s 完成: 生成 STRM %d 个, 字幕 %d 个, 跳过 %d 个 → %s",
+			libID, count, subtitles, skipped, outRoot)
 	}
 }
 
@@ -160,64 +167,6 @@ func (a *App) syncAllStrmTask(outputDir, serverBase string, includeSubtitles boo
 			"progress": 100,
 			"result":   result,
 		})
-	}
-}
-
-// generateStrm: 同步生成（非任务）
-func (a *App) generateStrm(libID, outputDir, serverBase string, includeSubtitles bool) map[string]any {
-	lib, err := a.cfg.LoadLib(libID)
-	if err != nil {
-		return nil
-	}
-	category, _ := lib["category"].(string)
-	cfg := a.cfg.Config()
-	fastMode := cfg["mode"] == "fast"
-	outRoot := filepath.Clean(outputDir)
-	if sub, ok := CATEGORY_DIRS[category]; ok {
-		outRoot = filepath.Join(outRoot, sub)
-	}
-	count := 0
-	subtitles := 0
-	skipped := 0
-	examples := []string{}
-	files, _ := lib["files"].([]any)
-	for _, f := range files {
-		fm, ok := f.(map[string]any)
-		if !ok {
-			continue
-		}
-		rel := safeRelPath(asString(fm["path"]))
-		ext := strings.ToLower(filepath.Ext(rel))
-		if VIDEO_EXTS[ext] {
-			target := filepath.Join(outRoot, relWithoutSuffix(rel, ext)+".strm")
-			os.MkdirAll(filepath.Dir(target), 0o755)
-			fileName := filepath.Base(rel)
-			url := makePlayURL(serverBase, int(firstInt64(fm, "idx")), asString(fm["etag"]), firstInt64(fm, "size"), fileName)
-			os.WriteFile(target, []byte(url+"\n"), 0o644)
-			count++
-			if len(examples) < 10 {
-				examples = append(examples, target)
-			}
-		} else if includeSubtitles && SUBTITLE_EXTS[ext] {
-			target := filepath.Join(outRoot, rel)
-			if a.downloadSubtitleFile(fm, target, fastMode) {
-				subtitles++
-			} else {
-				skipped++
-			}
-			if len(examples) < 10 {
-				examples = append(examples, target)
-			}
-		} else {
-			skipped++
-		}
-	}
-	return map[string]any{
-		"count":      count,
-		"subtitles":  subtitles,
-		"skipped":    skipped,
-		"output_dir": outRoot,
-		"examples":   examples,
 	}
 }
 
@@ -400,6 +349,3 @@ func (a *App) panExportTask(driver *Pan123, folders, files []map[string]any) fun
 		})
 	}
 }
-
-var _ = time.Now
-var _ = filepath.Clean

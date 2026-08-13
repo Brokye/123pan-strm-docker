@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/json"
 	"fmt"
 	"math/big"
 	"path"
@@ -10,6 +11,34 @@ import (
 )
 
 const BASE62_CHARS = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+
+// truncate: 日志用，截断过长的响应内容
+func truncate(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[:n] + "..."
+}
+
+// parseJSONBody: 健壮解析 123 API 响应体。
+// 部分接口/中间层会在 JSON 前追加前缀（如 `true{...}` / `200 {...}`），
+// json.Unmarshal 直接解析会失败；这里剥离前缀到第一个 `{`/`[` 再解析。
+func parseJSONBody(b []byte) (map[string]any, error) {
+	var rd map[string]any
+	if err := json.Unmarshal(b, &rd); err == nil {
+		return rd, nil
+	}
+	for i, c := range b {
+		if c == '{' || c == '[' {
+			var m map[string]any
+			if err := json.Unmarshal(b[i:], &m); err == nil {
+				return m, nil
+			}
+			break
+		}
+	}
+	return nil, fmt.Errorf("invalid json response: %s", truncate(string(b), 200))
+}
 
 func isHexMD5(etag string) bool {
 	m, _ := regexp.MatchString(`^[0-9a-fA-F]{32}$`, etag)
@@ -62,10 +91,6 @@ func toSecEtag(etag string) string {
 		return encryptEtagTo123FastLinkEtag(etag)
 	}
 	return etag
-}
-
-func isAvailableRegion() bool {
-	return true
 }
 
 // anonymizeId: 匿名化 FileId/parentFileId，同步修改 AbsPath
