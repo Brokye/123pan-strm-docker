@@ -1,7 +1,0 @@
-fastapi
-uvicorn
-pyyaml
-requests
-tqdm
-pydantic
-python-multipart
