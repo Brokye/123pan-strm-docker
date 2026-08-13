@@ -1,8 +1,17 @@
-FROM python:3.11-slim
+# 多阶段构建：golang 编译静态二进制 + 精简 runtime
+FROM golang:1.25-alpine AS builder
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    DATA_DIR=/data \
+WORKDIR /build
+
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/123pan-strm .
+
+FROM alpine:3.20
+
+ENV DATA_DIR=/data \
     SETTINGS_PATH=/data/settings.yaml \
     CACHE_PATH=/data/cache.json \
     STRM_OUTPUT_DIR=/strm \
@@ -11,13 +20,12 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /app
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r /app/requirements.txt
-
-COPY . /app
+COPY --from=builder /out/123pan-strm /app/123pan-strm
 
 RUN mkdir -p /data /strm
 
 EXPOSE 8000
 
-CMD ["python", "strm_app.py"]
+VOLUME ["/data", "/strm"]
+
+ENTRYPOINT ["/app/123pan-strm"]

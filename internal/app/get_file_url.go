@@ -1,0 +1,227 @@
+package app
+
+import (
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/hex"
+	"encoding/json"
+	"io"
+	"net/http"
+	"os"
+	"strings"
+	"time"
+)
+
+func accountHash(username, password string) string {
+	raw := username + "\n" + password
+	sum := sha256.Sum256([]byte(raw))
+	return hex.EncodeToString(sum[:])
+}
+
+func resetCacheForAccountChange(cacheData map[string]any, currentHash string) map[string]any {
+	if h, _ := cacheData["accountHash"].(string); h != "" && h != currentHash {
+		cacheData["accessToken"] = ""
+		cacheData["tokenCreateTime"] = ""
+		cacheData["lastDeleteTime"] = ""
+	}
+	cacheData["accountHash"] = currentHash
+	return cacheData
+}
+
+// getFileURL: 对外入口，token 失效自动清除并重试一次
+func (a *App) getFileURL(name, etag string, size int64, fastMode bool) string {
+	url := a.getFileURLOnce(name, etag, size, fastMode)
+	if url == "" || strings.Contains(url, "222.186.21.40:33333/NGGYU.mp4") {
+		cacheData := ReadJSONFile(a.cfg.CachePath)
+		if cacheData == nil {
+			cacheData = map[string]any{}
+		}
+		if tok, _ := cacheData["accessToken"].(string); tok != "" {
+			cacheData["accessToken"] = ""
+			cacheData["tokenCreateTime"] = ""
+			WriteJSONFile(a.cfg.CachePath, cacheData)
+			url = a.getFileURLOnce(name, etag, size, fastMode)
+		}
+	}
+	return url
+}
+
+func (a *App) getFileURLOnce(name, etag string, size int64, fastMode bool) string {
+	settingsData := LoadYAMLMap(a.cfg.SettingsPath)
+	if settingsData == nil {
+		settingsData = map[string]any{}
+	}
+	username, _ := settingsData["123PAN_USERNAME"].(string)
+	password, _ := settingsData["123PAN_PASSWORD"].(string)
+	currentHash := accountHash(username, password)
+
+	driver := NewPan123()
+
+	cacheData := ReadJSONFile(a.cfg.CachePath)
+	if cacheData == nil {
+		cacheData = map[string]any{}
+	}
+	cacheData = resetCacheForAccountChange(cacheData, currentHash)
+
+	if tok, _ := cacheData["accessToken"].(string); tok != "" {
+		if ct, ok := cacheData["tokenCreateTime"]; ok {
+			if tt, ok := ct.(float64); ok && time.Now().Unix()-int64(tt) < 25*24*60*60 {
+				driver.setAccessToken(tok)
+			}
+		}
+	}
+	if driver.getAccessToken() == "" {
+		if !driver.doLogin(username, password) {
+			return "http://222.186.21.40:33333/NGGYU.mp4"
+		}
+		cacheData["accessToken"] = driver.getAccessToken()
+		cacheData["tokenCreateTime"] = float64(time.Now().Unix())
+		cacheData["accountHash"] = currentHash
+		WriteJSONFile(a.cfg.CachePath, cacheData)
+	}
+
+	actionResult := driver.createFolder(0, "__缓存目录_无视即可_24h自动清理__123Pan-Unlimited-WebDAV", true)
+	if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+		return "http://222.186.21.40:33333/NGGYU.mp4"
+	}
+	cacheFolderInfo, _ := actionResult["message"].(map[string]any)
+	cacheFolderInfo2, _ := cacheFolderInfo["Info"].(map[string]any)
+	cacheFolderId := int64(0)
+	if fid, ok := cacheFolderInfo2["FileId"].(float64); ok {
+		cacheFolderId = int64(fid)
+	}
+
+	actionResult = driver.uploadFile(etag, name, cacheFolderId, size, true)
+	if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+		return "http://222.186.21.40:33333/NGGYU.mp4"
+	}
+	fileData, _ := actionResult["message"].(map[string]any)
+	fileInfo, _ := fileData["Info"].(map[string]any)
+
+	actionResult = driver.downloadFile(
+		asString(fileInfo["Etag"]),
+		int64(asFloat(fileInfo["FileId"])),
+		asString(fileInfo["S3KeyFlag"]),
+		int64(asFloat(fileInfo["Type"])),
+		asString(fileInfo["FileName"]),
+		int64(asFloat(fileInfo["Size"])),
+	)
+	if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+		return "http://222.186.21.40:33333/NGGYU.mp4"
+	}
+	downloadLink, _ := actionResult["message"].(string)
+
+	// 删除缓存文件夹（24h 清理）
+	if ld, ok := cacheData["lastDeleteTime"]; !ok || ld == "" {
+		cacheData["lastDeleteTime"] = float64(time.Now().Unix())
+		WriteJSONFile(a.cfg.CachePath, cacheData)
+	}
+	lastDel, _ := cacheData["lastDeleteTime"].(float64)
+	if time.Now().Unix()-int64(lastDel) > 24*60*60 {
+		actionResult = driver.deleteFile([]map[string]any{cacheFolderInfo2}, true)
+		if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+			return "http://222.186.21.40:33333/NGGYU.mp4"
+		}
+		cacheData["lastDeleteTime"] = float64(time.Now().Unix())
+		WriteJSONFile(a.cfg.CachePath, cacheData)
+	}
+
+	// 解析跳转链接
+	realURL := ""
+	parts := strings.Split(downloadLink, "params=")
+	if len(parts) > 1 {
+		realURL = strings.Split(parts[len(parts)-1], "&")[0]
+	}
+	decoded, err := base64.StdEncoding.DecodeString(realURL)
+	if err != nil {
+		return ""
+	}
+	realURL = string(decoded)
+
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	req, _ := http.NewRequest("GET", realURL, nil)
+	req.Header.Set("Referer", "https://yun.123pan.com/")
+	resp, err := client.Do(req)
+	if err != nil {
+		return ""
+	}
+	defer resp.Body.Close()
+	finalURL := ""
+	if resp.StatusCode == 302 {
+		finalURL = resp.Header.Get("Location")
+	} else if resp.StatusCode < 300 {
+		body, _ := io.ReadAll(resp.Body)
+		var rd map[string]any
+		if err := json.Unmarshal(body, &rd); err == nil {
+			if dt, ok := rd["data"].(map[string]any); ok {
+				finalURL, _ = dt["redirect_url"].(string)
+			}
+		}
+	} else {
+		return ""
+	}
+
+	// 播放过程中若自动重新登录刷新了 token，写回
+	if tok := driver.getAccessToken(); tok != "" {
+		if old, _ := cacheData["accessToken"].(string); tok != old {
+			cacheData["accessToken"] = tok
+			cacheData["tokenCreateTime"] = float64(time.Now().Unix())
+			cacheData["accountHash"] = currentHash
+			WriteJSONFile(a.cfg.CachePath, cacheData)
+		}
+	}
+
+	// 入库模式：60 秒后异步删除临时文件
+	if fastMode {
+		go func(driver *Pan123, fileInfo map[string]any, name string) {
+			time.Sleep(60 * time.Second)
+			driver.deleteFile([]map[string]any{fileInfo}, true)
+		}(driver, fileInfo, name)
+	}
+
+	return finalURL
+}
+
+func (a *App) getFileURLWithEtagCandidates(name, etag string, size int64, fastMode bool) string {
+	candidates := base62ToHexCandidates(etag)
+	lastURL := ""
+	for _, e := range candidates {
+		url := a.getFileURL(name, e, size, fastMode)
+		lastURL = url
+		if url != "" && !strings.Contains(url, "222.186.21.40:33333/NGGYU.mp4") {
+			return url
+		}
+	}
+	return lastURL
+}
+
+func asString(v any) string {
+	if s, ok := v.(string); ok {
+		return s
+	}
+	return ""
+}
+
+func asFloat(v any) float64 {
+	switch t := v.(type) {
+	case float64:
+		return t
+	case float32:
+		return float64(t)
+	case int:
+		return float64(t)
+	case int64:
+		return float64(t)
+	}
+	return 0
+}
+
+func fileExists(p string) bool {
+	_, err := os.Stat(p)
+	return err == nil
+}
