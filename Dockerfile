@@ -11,7 +11,8 @@ RUN CGO_ENABLED=0 GOOS=linux go build -trimpath -ldflags="-s -w" -o /out/123pan-
 
 FROM alpine:3.20
 
-ENV DATA_DIR=/data \
+ENV TZ=Asia/Shanghai \
+    DATA_DIR=/data \
     SETTINGS_PATH=/data/settings.yaml \
     CACHE_PATH=/data/cache.json \
     STRM_OUTPUT_DIR=/strm \

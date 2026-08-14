@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	_ "time/tzdata" // 内嵌时区数据库, 容器内无需安装 tzdata 也可识别 TZ
 )
 
 // ensure_cache_file: 确保 cache.json 存在
@@ -574,6 +575,15 @@ func (a *App) handlePlay(w http.ResponseWriter, r *http.Request) {
 }
 
 func RunServer() {
+	// 时区: 优先使用 TZ 环境变量(compose 里 TZ=Asia/Shanghai), 保证 cron/库名时间与本地一致
+	if tz := os.Getenv("TZ"); tz != "" {
+		if loc, err := time.LoadLocation(tz); err == nil {
+			time.Local = loc
+			fmt.Printf("时区: %s\n", tz)
+		} else {
+			fmt.Printf("警告: TZ=%s 解析失败: %v\n", tz, err)
+		}
+	}
 	baseDir, err := os.Getwd()
 	if err != nil {
 		baseDir = "."
