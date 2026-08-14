@@ -90,6 +90,11 @@ func (a *App) handler() http.Handler {
 	// 播放
 	mux.HandleFunc("/play/", a.handlePlay)
 
+	// 定时归档
+	mux.HandleFunc("/api/archive/jobs", a.handleArchiveJobs)
+	mux.HandleFunc("/api/archive/jobs/", a.handleArchiveJobItem)
+	mux.HandleFunc("/archive", a.handleArchivePage)
+
 	return a.cors(mux)
 }
 
@@ -578,10 +583,92 @@ func RunServer() {
 	cfg.EnsureSettingsYAML(settingsYAMLBytes)
 	cfg.EnsureCacheFile()
 	app := NewApp(cfg)
+	app.startArchiveScheduler()
 	addr := "0.0.0.0:" + cfg.DefaultPort
 	if host := os.Getenv("HOST"); host != "" {
 		addr = host + ":" + cfg.DefaultPort
 	}
 	fmt.Printf("STRM API: http://127.0.0.1:%s/\n", cfg.DefaultPort)
+	fmt.Printf("定时归档: http://127.0.0.1:%s/archive\n", cfg.DefaultPort)
 	http.ListenAndServe(addr, app.handler())
+}
+
+// ---------- 定时归档 API ----------
+
+// GET/POST /api/archive/jobs
+func (a *App) handleArchiveJobs(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodGet:
+		writeJSON(w, 200, map[string]any{"items": a.LoadArchiveJobs()})
+	case http.MethodPost:
+		var job ArchiveJob
+		if err := json.NewDecoder(r.Body).Decode(&job); err != nil {
+			writeJSON(w, 400, map[string]any{"ok": false, "error": "invalid job: " + err.Error()})
+			return
+		}
+		saved, err := a.SaveArchiveJob(job)
+		if err != nil {
+			writeJSON(w, 500, map[string]any{"ok": false, "error": err.Error()})
+			return
+		}
+		writeJSON(w, 200, map[string]any{"ok": true, "id": saved.ID})
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+// DELETE /api/archive/jobs/{id} | POST /api/archive/jobs/{id}/run | GET /api/archive/jobs/{id}/runs
+func (a *App) handleArchiveJobItem(w http.ResponseWriter, r *http.Request) {
+	rest := strings.TrimPrefix(r.URL.Path, "/api/archive/jobs/")
+	parts := strings.Split(rest, "/")
+	id := parts[0]
+	if id == "" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if len(parts) == 1 {
+		if r.Method == http.MethodDelete {
+			a.DeleteArchiveJob(id)
+			writeJSON(w, 200, map[string]any{"ok": true})
+			return
+		}
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	switch parts[1] {
+	case "run":
+		if r.Method != http.MethodPost {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		job := a.LoadArchiveJob(id)
+		if job == nil {
+			writeJSON(w, 404, map[string]any{"ok": false, "error": "job not found"})
+			return
+		}
+		jobCopy := *job
+		taskID := a.startTask("archive_"+jobCopy.ID, func(emit func(map[string]any)) {
+			a.archiveJobRun(jobCopy, emit)
+		})
+		writeJSON(w, 200, map[string]any{"ok": true, "task_id": taskID})
+	case "runs":
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		writeJSON(w, 200, map[string]any{"items": a.LoadArchiveRuns(id, 50)})
+	default:
+		writeJSON(w, 404, map[string]any{"ok": false, "error": "not found"})
+	}
+}
+
+// GET /archive 定时归档页面
+func (a *App) handleArchivePage(w http.ResponseWriter, r *http.Request) {
+	if len(archiveHTMLBytes) > 0 {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		w.Write(archiveHTMLBytes)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Write([]byte("<h1>定时归档</h1><p>archive.html 未嵌入</p>"))
 }

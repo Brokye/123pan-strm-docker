@@ -12,8 +12,12 @@ var indexHTML []byte
 //go:embed settings.yaml
 var settingsYAML []byte
 
+//go:embed archive.html
+var archiveHTML []byte
+
 func init() {
 	app.SetEmbedded(indexHTML, settingsYAML)
+	app.SetArchiveEmbedded(archiveHTML)
 }
 
 func main() {

@@ -8,18 +8,24 @@ import (
 	"runtime"
 	"sync"
 	"time"
+
+	"github.com/robfig/cron/v3"
 )
 
 type App struct {
-	cfg   *Config
-	tasks map[string]*TaskState
-	mu    sync.Mutex
+	cfg         *Config
+	tasks       map[string]*TaskState
+	mu          sync.Mutex
+	cron        *cron.Cron
+	cronMu      sync.Mutex
+	cronEntries map[string]cron.EntryID
 }
 
 func NewApp(cfg *Config) *App {
 	return &App{
-		cfg:   cfg,
-		tasks: map[string]*TaskState{},
+		cfg:         cfg,
+		tasks:       map[string]*TaskState{},
+		cronEntries: map[string]cron.EntryID{},
 	}
 }
 

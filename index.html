@@ -213,6 +213,34 @@ body {
   transform: rotate(180deg);
 }
 
+.archive-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px;
+  border-radius: 12px;
+  border: 1px solid var(--input-border);
+  background: var(--input-bg);
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.archive-link:hover {
+  background: var(--hover-bg);
+  transform: translateY(-1px);
+}
+
+.archive-link svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-purple);
+}
+
 .mode-card {
   display: flex;
   align-items: center;
@@ -1537,6 +1565,13 @@ body {
       </div>
     </div>
     <div class="nav-actions">
+      <a class="archive-link" href="/archive" title="定时归档">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="9"/>
+          <polyline points="12 7 12 12 15 14"/>
+        </svg>
+        <span>定时归档</span>
+      </a>
       <button class="theme-toggle" id="themeToggle" title="切换主题">
         <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="5"/>
@@ -1605,6 +1640,7 @@ body {
               <div class="vp-dropdown-item" data-val="动漫" onclick="ddSelect('ddLibCat','动漫',this)">动漫</div>
               <div class="vp-dropdown-item" data-val="纪录片" onclick="ddSelect('ddLibCat','纪录片',this)">纪录片</div>
               <div class="vp-dropdown-item" data-val="综艺" onclick="ddSelect('ddLibCat','综艺',this)">综艺</div>
+              <div class="vp-dropdown-item" data-val="定时归档" onclick="ddSelect('ddLibCat','定时归档',this)">定时归档</div>
             </div>
           </div>
         </div>
@@ -1819,6 +1855,7 @@ body {
           <div class="vp-dropdown-item" data-val="动漫" onclick="ddSelect('ddMergeCat','动漫',this)">动漫</div>
           <div class="vp-dropdown-item" data-val="纪录片" onclick="ddSelect('ddMergeCat','纪录片',this)">纪录片</div>
           <div class="vp-dropdown-item" data-val="综艺" onclick="ddSelect('ddMergeCat','综艺',this)">综艺</div>
+          <div class="vp-dropdown-item" data-val="定时归档" onclick="ddSelect('ddMergeCat','定时归档',this)">定时归档</div>
         </div>
       </div>
     </div>
@@ -2119,11 +2156,12 @@ var catClasses = {
   '动漫': 'cat-anime',
   '纪录片': 'cat-doc',
   '综艺': 'cat-show',
+  '定时归档': 'cat-other',
   '': 'cat-other'
 };
 
-var catOrder = ['电影', '剧集', '动漫', '纪录片', '综艺', ''];
-var catNames = { '电影': '电影', '剧集': '剧集', '动漫': '动漫', '纪录片': '纪录片', '综艺': '综艺', '': '未分类' };
+var catOrder = ['电影', '剧集', '动漫', '纪录片', '综艺', '定时归档', ''];
+var catNames = { '电影': '电影', '剧集': '剧集', '动漫': '动漫', '纪录片': '纪录片', '综艺': '综艺', '定时归档': '定时归档', '': '未分类' };
 
 function esc(s) {
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

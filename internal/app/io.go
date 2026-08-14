@@ -16,11 +16,16 @@ var errUnsupportedFormat = errors.New("unsupported format")
 var (
 	indexHTMLBytes    []byte
 	settingsYAMLBytes []byte
+	archiveHTMLBytes  []byte
 )
 
 func SetEmbedded(indexHTML, settingsYAML []byte) {
 	indexHTMLBytes = indexHTML
 	settingsYAMLBytes = settingsYAML
+}
+
+func SetArchiveEmbedded(b []byte) {
+	archiveHTMLBytes = b
 }
 
 func LoadYAMLMap(p string) map[string]any {

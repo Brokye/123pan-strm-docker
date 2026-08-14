@@ -22,6 +22,7 @@ var CATEGORY_DIRS = map[string]string{
 	"动漫":  "动漫",
 	"纪录片": "纪录片",
 	"综艺":  "综艺",
+	"定时归档": "定时归档",
 }
 
 var spacesRe = regexp.MustCompile(`\s+`)

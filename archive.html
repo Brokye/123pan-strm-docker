@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>定时归档 · 123 秒传 STRM</title>
+<style>
+:root {
+  --glass-bg: rgba(255, 255, 255, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.8);
+  --glass-shadow: 0 8px 32px rgba(31, 38, 135, 0.08);
+  --bg-primary: #f5f5f7;
+  --bg-secondary: #ffffff;
+  --text-primary: #1d1d1f;
+  --text-secondary: #6e6e73;
+  --text-tertiary: #8e8e93;
+  --accent-blue: #0071e3;
+  --accent-green: #34c759;
+  --accent-red: #ff3b30;
+  --accent-orange: #ff9500;
+  --accent-purple: #af52de;
+  --input-bg: rgba(255, 255, 255, 0.9);
+  --input-border: rgba(0, 0, 0, 0.08);
+  --divider: rgba(0, 0, 0, 0.06);
+  --hover-bg: rgba(0, 0, 0, 0.03);
+  --btn-secondary-bg: rgba(120, 120, 128, 0.12);
+  --orb-1: rgba(0, 113, 227, 0.12);
+  --orb-2: rgba(175, 82, 222, 0.1);
+  --orb-3: rgba(52, 199, 89, 0.08);
+  --row-hover: rgba(0, 0, 0, 0.02);
+  --badge-bg: rgba(120, 120, 128, 0.12);
+  --track-bg: rgba(120, 120, 128, 0.25);
+}
+[data-theme="dark"] {
+  --glass-bg: rgba(40, 40, 42, 0.7);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --bg-primary: #000000;
+  --bg-secondary: #1c1c1e;
+  --text-primary: #f5f5f7;
+  --text-secondary: #aeaeb2;
+  --text-tertiary: #8e8e93;
+  --accent-blue: #0a84ff;
+  --accent-green: #30d158;
+  --accent-red: #ff453a;
+  --accent-orange: #ff9f0a;
+  --accent-purple: #bf5af2;
+  --input-bg: rgba(58, 58, 60, 0.8);
+  --input-border: rgba(255, 255, 255, 0.12);
+  --divider: rgba(255, 255, 255, 0.08);
+  --hover-bg: rgba(255, 255, 255, 0.05);
+  --btn-secondary-bg: rgba(120, 120, 128, 0.2);
+  --orb-1: rgba(10, 132, 255, 0.18);
+  --orb-2: rgba(191, 90, 242, 0.15);
+  --orb-3: rgba(48, 209, 88, 0.12);
+  --row-hover: rgba(255, 255, 255, 0.03);
+  --badge-bg: rgba(120, 120, 128, 0.2);
+  --track-bg: rgba(120, 120, 128, 0.35);
+}
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Microsoft YaHei", sans-serif;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  position: relative;
+  overflow-x: hidden;
+  transition: background 0.5s ease, color 0.5s ease;
+}
+.bg-orbs { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; overflow: hidden; }
+.orb { position: absolute; border-radius: 50%; filter: blur(100px); animation: float 25s ease-in-out infinite; }
+.orb-1 { width: 500px; height: 500px; background: var(--orb-1); top: -200px; right: -100px; }
+.orb-2 { width: 400px; height: 400px; background: var(--orb-2); bottom: -150px; left: -100px; animation-delay: -8s; }
+.orb-3 { width: 350px; height: 350px; background: var(--orb-3); top: 50%; left: 40%; animation-delay: -16s; }
+@keyframes float {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(40px, -20px) scale(1.05); }
+  66% { transform: translate(-20px, 30px) scale(0.95); }
+}
+.wrap { max-width: 1100px; margin: 0 auto; padding: 28px 24px; position: relative; z-index: 1; }
+
+/* 导航 */
+.top-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 24px; padding: 14px 20px;
+  background: var(--glass-bg); backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-border); border-radius: 20px; box-shadow: var(--glass-shadow);
+}
+.nav-brand { display: flex; align-items: center; gap: 12px; }
+.brand-icon {
+  width: 40px; height: 40px;
+  background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+  border-radius: 12px; display: flex; align-items: center; justify-content: center;
+}
+.brand-icon svg { width: 22px; height: 22px; color: white; }
+.brand-text h1 { font-size: 19px; font-weight: 600; letter-spacing: -0.02em; }
+.brand-text .subtitle { font-size: 11px; color: var(--text-tertiary); margin-top: 1px; }
+.nav-actions { display: flex; align-items: center; gap: 10px; }
+.theme-toggle {
+  width: 40px; height: 40px; border-radius: 12px; border: 1px solid var(--input-border);
+  background: var(--input-bg); cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); color: var(--text-primary);
+}
+.theme-toggle:hover { background: var(--hover-bg); }
+.theme-toggle svg { width: 18px; height: 18px; transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+.theme-toggle:hover svg { transform: rotate(180deg); }
+.home-link {
+  display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 14px;
+  border-radius: 12px; border: 1px solid var(--input-border); background: var(--input-bg);
+  color: var(--text-primary); text-decoration: none; font-size: 13px; font-weight: 500;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.home-link:hover { background: var(--hover-bg); transform: translateY(-1px); }
+.home-link svg { width: 16px; height: 16px; }
+
+/* 卡片 */
+.glass-card {
+  background: var(--glass-bg); backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-border); border-radius: 20px; box-shadow: var(--glass-shadow);
+  padding: 24px; margin-bottom: 24px; transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 22px; }
+.card-icon {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+}
+.card-icon svg { width: 20px; height: 20px; }
+.card-icon.blue { background: rgba(0, 113, 227, 0.12); color: var(--accent-blue); }
+.card-icon.purple { background: rgba(175, 82, 222, 0.12); color: var(--accent-purple); }
+.card-icon.green { background: rgba(52, 199, 89, 0.12); color: var(--accent-green); }
+.card-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.card-title-row { display: flex; align-items: center; gap: 8px; }
+.card-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--divider);
+}
+
+/* Tooltip(自定义, 替代浏览器原生 title) */
+.tip {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%;
+  background: var(--badge-bg); color: var(--text-tertiary);
+  font-size: 10px; font-style: normal; cursor: help; position: relative;
+  flex-shrink: 0;
+}
+.tip::after {
+  content: attr(data-tip);
+  position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+  background: var(--bg-secondary); border: 1px solid var(--glass-border);
+  color: var(--text-secondary); font-size: 11px; font-weight: 400; line-height: 1.5;
+  padding: 8px 12px; border-radius: 10px; white-space: nowrap;
+  box-shadow: var(--glass-shadow); opacity: 0; pointer-events: none;
+  transition: opacity 0.15s ease; z-index: 20;
+}
+.tip:hover::after { opacity: 1; }
+
+/* 表单: 统一控件 */
+.form-grid {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 20px; row-gap: 16px;
+}
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field-label { font-size: 12px; font-weight: 500; color: var(--text-secondary); padding-left: 2px; }
+.vp-input, .vp-select {
+  width: 100%; height: 42px;
+  background: var(--input-bg); color: var(--text-primary);
+  border: 1px solid var(--input-border); border-radius: 12px;
+  padding: 0 14px; font-size: 14px; font-family: inherit; outline: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); -webkit-appearance: none;
+}
+.vp-input:focus, .vp-select:focus {
+  border-color: var(--accent-blue); box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.12);
+}
+.vp-input::placeholder { color: var(--text-tertiary); }
+.vp-select {
+  cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238e8e93' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px;
+}
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+.mono { font-family: "SF Mono", Consolas, monospace; font-size: 13px; }
+
+/* Input Group(组合框: 输入框与按钮吸附对齐) */
+.input-group { display: flex; }
+.input-group .vp-input {
+  flex: 1; min-width: 0;
+  border-top-right-radius: 0; border-bottom-right-radius: 0;
+}
+.input-group .input-group-btn {
+  height: 42px; padding: 0 16px; flex-shrink: 0;
+  border: 1px solid var(--input-border); border-left: none;
+  border-radius: 0 12px 12px 0;
+  background: var(--btn-secondary-bg); color: var(--text-primary);
+  font-size: 13px; font-weight: 500; font-family: inherit; cursor: pointer;
+  transition: all 0.2s ease;
+}
+.input-group .input-group-btn:hover { background: var(--hover-bg); }
+
+/* 开关(Vision Pro 风格, 替代原生 checkbox) */
+.check-row { display: flex; align-items: center; gap: 10px; margin-right: 24px; }
+.check-row .switch-label { font-size: 13px; color: var(--text-primary); cursor: pointer; user-select: none; }
+.vp-toggle { position: relative; width: 44px; height: 26px; flex-shrink: 0; }
+.vp-toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.vp-toggle .track {
+  position: absolute; inset: 0; border-radius: 13px;
+  background: var(--track-bg); transition: background 0.25s ease;
+}
+.vp-toggle .track::after {
+  content: ''; position: absolute; top: 2px; left: 2px;
+  width: 22px; height: 22px; border-radius: 50%; background: #fff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.vp-toggle input:checked + .track { background: var(--accent-green); }
+.vp-toggle input:checked + .track::after { transform: translateX(18px); }
+.vp-toggle input:focus-visible + .track { box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.25); }
+
+/* 按钮 */
+.vp-btn {
+  border: none; border-radius: 12px; padding: 10px 20px;
+  font-weight: 500; font-size: 14px; font-family: inherit; cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  letter-spacing: -0.01em;
+}
+.vp-btn:hover { transform: translateY(-1px); }
+.vp-btn:active { transform: translateY(0); opacity: 0.9; }
+.vp-btn.primary { background: var(--accent-blue); color: white; }
+.vp-btn.primary:hover { background: #0077ed; }
+.vp-btn.secondary { background: var(--btn-secondary-bg); color: var(--text-primary); }
+.vp-btn.ghost { background: transparent; color: var(--text-secondary); }
+.vp-btn.ghost:hover { background: var(--hover-bg); color: var(--text-primary); }
+.vp-btn.success { background: var(--accent-green); color: white; }
+.vp-btn.danger { background: var(--btn-secondary-bg); color: var(--accent-red); }
+.vp-btn.sm { padding: 5px 12px; font-size: 12px; border-radius: 9px; }
+
+/* 表格 */
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--divider); vertical-align: middle; }
+th { color: var(--text-tertiary); font-weight: 500; font-size: 11px; letter-spacing: 0.03em; }
+tbody tr { transition: background 0.15s ease; }
+tbody tr:hover { background: var(--row-hover); }
+.table-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.badge { display: inline-block; padding: 2px 9px; border-radius: 20px; font-size: 11px; font-weight: 600; background: var(--badge-bg); }
+.badge.on { background: rgba(52, 199, 89, 0.15); color: var(--accent-green); }
+.badge.off { background: var(--badge-bg); color: var(--text-tertiary); }
+.badge.ok { background: rgba(52, 199, 89, 0.15); color: var(--accent-green); }
+.badge.failed { background: rgba(255, 59, 48, 0.15); color: var(--accent-red); }
+.badge.skipped { background: var(--badge-bg); color: var(--text-tertiary); }
+
+/* 空状态 */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 40px 0; color: var(--text-tertiary);
+}
+.empty-state svg { width: 44px; height: 44px; margin-bottom: 12px; opacity: 0.45; }
+.empty-state .empty-title { font-size: 14px; font-weight: 500; color: var(--text-secondary); margin-bottom: 4px; }
+.empty-state .empty-desc { font-size: 12px; }
+
+/* 进度 */
+.progress-wrap { margin-top: 16px; }
+.progress-bar { height: 8px; background: var(--badge-bg); border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: var(--accent-blue); width: 0%; transition: width 0.3s; }
+.progress-text { display: flex; justify-content: space-between; margin-top: 6px; font-size: 12px; color: var(--text-secondary); }
+.hidden { display: none; }
+
+/* 历史 */
+.history-box { max-height: 320px; overflow-y: auto; }
+.history-item { font-size: 13px; padding: 12px 4px; border-bottom: 1px solid var(--divider); }
+.history-item:last-child { border-bottom: none; }
+.history-item .t { color: var(--text-tertiary); font-size: 12px; }
+.history-item .err { color: var(--accent-red); font-size: 12px; margin-top: 4px; word-break: break-all; }
+
+/* 使用须知 */
+.warn-banner {
+  display: flex; gap: 10px; align-items: flex-start;
+  background: rgba(255, 149, 0, 0.09); border: 1px solid rgba(255, 149, 0, 0.22);
+  border-radius: 12px; padding: 12px 14px; margin-bottom: 20px;
+  font-size: 12px; color: var(--text-secondary); line-height: 1.65;
+}
+.warn-banner svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--accent-orange); margin-top: 1px; }
+.warn-banner b { color: var(--text-primary); font-weight: 500; }
+
+/* 文件夹选择模态框 */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  z-index: 1000; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.modal-overlay.show { display: flex; opacity: 1; }
+.vp-modal {
+  background: var(--glass-bg);
+  backdrop-filter: blur(40px) saturate(180%); -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 1px solid var(--glass-border); border-radius: 24px;
+  padding: 24px; width: 460px; max-width: 92vw;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  transform: scale(0.95) translateY(10px);
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.modal-overlay.show .vp-modal { transform: scale(1) translateY(0); }
+.modal-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.modal-icon {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(175, 82, 222, 0.12); color: var(--accent-purple);
+}
+.modal-icon svg { width: 20px; height: 20px; }
+.modal-title { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.modal-desc { font-size: 12px; color: var(--text-tertiary); margin-top: 2px; }
+.modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 16px; }
+.dir-crumb {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 12px; color: var(--text-secondary);
+  background: var(--input-bg); border: 1px solid var(--input-border);
+  border-radius: 10px; padding: 7px 12px; margin-bottom: 10px;
+  overflow: hidden; white-space: nowrap;
+}
+.dir-crumb .sep { color: var(--text-tertiary); }
+.pan-tree {
+  background: var(--input-bg); border: 1px solid var(--input-border);
+  border-radius: 14px; padding: 8px; max-height: 380px; min-height: 180px;
+  overflow-y: auto;
+}
+.pan-tree::-webkit-scrollbar { width: 5px; }
+.pan-tree::-webkit-scrollbar-thumb { background: var(--text-tertiary); border-radius: 3px; opacity: .5; }
+.pan-row {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 8px; border-radius: 8px; cursor: pointer;
+  transition: background .2s ease;
+}
+.pan-row:hover { background: var(--hover-bg); }
+.pan-row.selected { background: rgba(0, 113, 227, 0.12); }
+.pan-row.selected .pan-name { color: var(--accent-blue); font-weight: 500; }
+.pan-chevron {
+  width: 14px; height: 14px; flex-shrink: 0; color: var(--text-tertiary);
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: transform .2s ease; cursor: pointer;
+}
+.pan-chevron.open { transform: rotate(90deg); }
+.pan-chevron-placeholder { width: 14px; flex-shrink: 0; }
+.pan-icon { width: 16px; height: 16px; flex-shrink: 0; color: var(--accent-blue); display: inline-flex; align-items: center; justify-content: center; }
+.pan-icon svg { width: 14px; height: 14px; }
+.pan-name { flex: 1; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pan-children { padding-left: 8px; }
+.pan-loading { display: flex; align-items: center; gap: 8px; justify-content: center; padding: 40px 0; color: var(--text-tertiary); font-size: 12px; }
+.pan-empty { text-align: center; padding: 40px 0; color: var(--text-tertiary); font-size: 12px; }
+.loading-spinner {
+  width: 14px; height: 14px; border-radius: 50%;
+  border: 2px solid var(--track-bg); border-top-color: var(--accent-blue);
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.pan-check {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+  border: 1.5px solid var(--track-bg); transition: all .2s ease;
+}
+.pan-row.selected .pan-check { border-color: var(--accent-blue); background: var(--accent-blue); }
+.pan-check svg { width: 9px; height: 9px; color: #fff; opacity: 0; transition: opacity .15s ease; }
+.pan-row.selected .pan-check svg { opacity: 1; }
+
+@media (max-width: 768px) {
+  .wrap { padding: 16px 12px; }
+  .glass-card { padding: 18px; }
+  .form-grid { grid-template-columns: 1fr; }
+  table { font-size: 12px; }
+  .check-row { margin-right: 16px; margin-bottom: 4px; }
+}
+</style>
+</head>
+<body>
+<div class="bg-orbs"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
+
+<div class="wrap">
+  <nav class="top-nav">
+    <div class="nav-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 15 14"/></svg>
+      </div>
+      <div class="brand-text">
+        <h1>定时归档</h1>
+        <div class="subtitle">云盘文件夹 → STRM → 自动清理</div>
+      </div>
+    </div>
+    <div class="nav-actions">
+      <a class="home-link" href="/">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+        <span>返回主页</span>
+      </a>
+      <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()" title="切换主题"></button>
+    </div>
+  </nav>
+
+  <!-- 新建 / 编辑任务 -->
+  <section class="glass-card">
+    <div class="warn-banner">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      <div><b>使用须知:</b>本功能依赖 123 云盘接口,不保证永久有效,接口随时可能调整或封闭,请勿用于存放重要数据。秒传基于服务器留存副本:删除孤本文件(无人再存)后,123 会清除服务器数据,秒传立即失效且不可恢复——请务必确认文件在其他用户处有备份。</div>
+    </div>
+    <div class="card-header">
+      <div class="card-icon blue">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>
+      </div>
+      <div>
+        <div class="card-title-row">
+          <span class="card-title" id="formTitle">新建任务</span>
+          <i class="tip" data-tip="定时扫描云盘文件夹, 生成 STRM 保存到秒传库, 再按策略清理云盘文件">?</i>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <div class="field">
+        <label class="field-label" for="f_name">任务名称</label>
+        <input class="vp-input" id="f_name" placeholder="如: 电影归档">
+      </div>
+      <div class="field">
+        <label class="field-label" for="f_fid">云盘文件夹</label>
+        <div class="input-group">
+          <input class="vp-input mono" id="f_fid" type="number" placeholder="文件夹 ID">
+          <button class="input-group-btn" onclick="openFolderPicker()">浏览</button>
+        </div>
+      </div>
+      <div class="field">
+        <label class="field-label" for="f_fname">文件夹名称(用于库名)</label>
+        <input class="vp-input" id="f_fname" placeholder="如: 电影">
+      </div>
+      <div class="field">
+        <label class="field-label" for="f_cat">分类</label>
+        <select class="vp-select" id="f_cat">
+          <option value="">无</option>
+          <option>电影</option><option>剧集</option><option>动漫</option>
+          <option>纪录片</option><option>综艺</option><option selected>定时归档</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label" for="f_cron">Cron 表达式 <span style="color:var(--text-tertiary);font-weight:400">(分 时 日 月 周)</span></label>
+        <input class="vp-input mono" id="f_cron" value="0 3 * * *">
+      </div>
+      <div class="field">
+        <label class="field-label" for="f_out">STRM 输出目录</label>
+        <input class="vp-input" id="f_out" placeholder="留空用全局配置">
+      </div>
+      <div class="field">
+        <label class="field-label" for="f_base">服务地址</label>
+        <input class="vp-input" id="f_base" placeholder="留空用全局配置">
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;margin-top:20px">
+      <label class="check-row">
+        <span class="vp-toggle"><input type="checkbox" id="f_sub" checked><span class="track"></span></span>
+        <span class="switch-label" for="f_sub">下载字幕</span>
+      </label>
+      <label class="check-row">
+        <span class="vp-toggle"><input type="checkbox" id="f_del"><span class="track"></span></span>
+        <span class="switch-label" for="f_del">生成后删除云盘文件</span>
+      </label>
+      <label class="check-row">
+        <span class="vp-toggle"><input type="checkbox" id="f_en" checked><span class="track"></span></span>
+        <span class="switch-label" for="f_en">启用定时</span>
+      </label>
+    </div>
+
+    <div class="card-footer">
+      <button class="vp-btn ghost" onclick="resetForm()">清空</button>
+      <button class="vp-btn primary" onclick="saveJob()">保存任务</button>
+    </div>
+  </section>
+
+  <!-- 任务列表 -->
+  <section class="glass-card">
+    <div class="card-header">
+      <div class="card-icon purple">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      </div>
+      <div>
+        <div class="card-title-row">
+          <span class="card-title">任务列表</span>
+          <i class="tip" data-tip="点击「运行」可先试跑一轮, 确认 STRM 生成无误后再开启定时">?</i>
+        </div>
+      </div>
+    </div>
+    <table>
+      <thead><tr><th>名称</th><th>文件夹</th><th>分类</th><th>定时</th><th>启用</th><th>删除</th><th>操作</th></tr></thead>
+      <tbody id="jobRows"></tbody>
+    </table>
+    <div id="jobEmpty" class="empty-state hidden">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      <div class="empty-title">暂无归档任务</div>
+      <div class="empty-desc">先在上方新建一个定时任务</div>
+    </div>
+    <div id="runProgress" class="progress-wrap hidden">
+      <div class="progress-text"><span id="msg"></span><span id="ppct">0%</span></div>
+      <div class="progress-bar"><div class="progress-fill" id="pbar"></div></div>
+    </div>
+  </section>
+
+  <!-- 运行历史 -->
+  <section class="glass-card">
+      <div class="card-header">
+        <div class="card-icon green">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9M3 12h9M3 12V3"/><path d="M3 3l9 9"/></svg>
+        </div>
+        <div>
+          <div class="card-title-row">
+            <span class="card-title">运行历史</span>
+            <i class="tip" data-tip="每次运行的结果摘要, 保存在 data/jobs/history/ 下">?</i>
+          </div>
+        </div>
+      </div>
+      <div class="history-box" id="historyBox">
+        <div class="empty-state" id="historyEmpty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9M3 12h9M3 12V3"/><path d="M3 3l9 9"/></svg>
+          <div class="empty-title">暂无运行记录</div>
+          <div class="empty-desc">点击任务列表中的「历史」查看对应任务</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- 云盘文件夹选择器 -->
+  <div class="modal-overlay" id="folderDlg">
+    <div class="vp-modal">
+      <div class="modal-header">
+        <div class="modal-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+        </div>
+        <div>
+          <div class="modal-title">选择云盘文件夹</div>
+          <div class="modal-desc">点击行选中文件夹, 展开箭头可进入子目录</div>
+        </div>
+      </div>
+      <div class="dir-crumb" id="dirCrumb">根目录</div>
+      <div class="pan-tree" id="folderTree">
+        <div class="pan-loading"><span class="loading-spinner"></span> 正在加载网盘目录...</div>
+      </div>
+      <div class="modal-actions">
+        <button class="vp-btn ghost" onclick="closeFolderPicker()">取消</button>
+        <button class="vp-btn primary" onclick="folderConfirm()">选择</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let editingId = null;
+const $ = id => document.getElementById(id);
+async function api(path, method='GET', body) {
+  const opt = {method, headers:{}};
+  if (body) { opt.headers['Content-Type']='application/json'; opt.body = JSON.stringify(body); }
+  const r = await fetch(path, opt);
+  return r.json();
+}
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmtTime(ts){ if(!ts) return '-'; const d=new Date(ts*1000); return d.toLocaleString('zh-CN',{hour12:false}); }
+
+async function loadJobs(){
+  const d = await api('/api/archive/jobs');
+  const items = d.items||[];
+  $('jobEmpty').classList.toggle('hidden', items.length>0);
+  const rows = items.map(j=>`
+    <tr>
+      <td>${esc(j.name)}</td>
+      <td>${esc(j.pan_folder_name||'')} <span class="mono" style="color:var(--text-tertiary)">#${j.pan_folder_id}</span></td>
+      <td>${esc(j.category||'-')}</td>
+      <td class="mono">${esc(j.cron||'-')}</td>
+      <td><span class="badge ${j.enabled?'on':'off'}">${j.enabled?'启用':'停用'}</span></td>
+      <td>${j.delete_after ? (j.delete_mode==='permanent'?'彻底':'回收站') : '不删'}</td>
+      <td>
+        <div class="table-actions">
+          <button class="vp-btn success sm" onclick="runJob('${j.id}')">运行</button>
+          <button class="vp-btn secondary sm" onclick="editJob('${j.id}')">编辑</button>
+          <button class="vp-btn secondary sm" onclick="loadRuns('${j.id}')">历史</button>
+          <button class="vp-btn danger sm" onclick="delJob('${j.id}')">删除</button>
+        </div>
+      </td>
+    </tr>`).join('');
+  $('jobRows').innerHTML = rows;
+}
+
+function resetForm(){
+  editingId=null; $('formTitle').textContent='新建任务';
+  ['f_name','f_fid','f_fname','f_cron','f_out','f_base'].forEach(i=>$(i).value='');
+  $('f_cat').value='定时归档';
+  $('f_sub').checked=true; $('f_del').checked=false; $('f_en').checked=true;
+  $('f_cron').value='0 3 * * *';
+}
+async function editJob(id){
+  const d = await api('/api/archive/jobs');
+  const j = (d.items||[]).find(x=>x.id===id); if(!j) return;
+  editingId=id; $('formTitle').textContent='编辑: '+j.name;
+  $('f_name').value=j.name||''; $('f_fid').value=j.pan_folder_id||'';
+  $('f_fname').value=j.pan_folder_name||''; $('f_cat').value=j.category||'';
+  $('f_cron').value=j.cron||''; $('f_out').value=j.output_dir||'';
+  $('f_base').value=j.server_base||'';
+  $('f_sub').checked=!!j.include_subtitles; $('f_del').checked=j.delete_after!==false; $('f_en').checked=!!j.enabled;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+async function saveJob(){
+  const job = {
+    id: editingId || undefined,
+    name: $('f_name').value.trim() || '未命名任务',
+    enabled: $('f_en').checked,
+    cron: $('f_cron').value.trim(),
+    pan_folder_id: parseInt($('f_fid').value) || 0,
+    pan_folder_name: $('f_fname').value.trim(),
+    category: $('f_cat').value,
+    output_dir: $('f_out').value.trim(),
+    server_base: $('f_base').value.trim(),
+    include_subtitles: $('f_sub').checked,
+    delete_after: $('f_del').checked,
+    delete_mode: 'trash',
+    delete_strategy: 'file',
+  };
+  if(!job.pan_folder_id){ alert('请填写云盘文件夹 ID'); return; }
+  const r = await api('/api/archive/jobs','POST',job);
+  if(r.ok){ resetForm(); loadJobs(); }
+  else alert('保存失败: '+(r.error||''));
+}
+async function delJob(id){ if(!confirm('确定删除任务 '+id+'?')) return; await api('/api/archive/jobs/'+id,'DELETE'); loadJobs(); }
+
+let pollTimer=null;
+async function runJob(id){
+  const r = await api('/api/archive/jobs/'+id+'/run','POST');
+  if(!r.ok){ alert('触发失败: '+(r.error||'')); return; }
+  $('runProgress').classList.remove('hidden');
+  pollTask(r.task_id);
+}
+async function pollTask(tid){
+  clearInterval(pollTimer);
+  pollTimer = setInterval(async ()=>{
+    const d = await api('/api/task/'+tid);
+    if(!d.ok){ clearInterval(pollTimer); $('msg').textContent='任务不存在'; return; }
+    $('msg').textContent = d.message||'';
+    $('pbar').style.width = (d.progress||0)+'%';
+    $('ppct').textContent = (d.progress||0)+'%';
+    if(d.state==='done'||d.state==='error'){
+      clearInterval(pollTimer);
+      setTimeout(()=>{ $('runProgress').classList.add('hidden'); }, 6000);
+      loadJobs();
+    }
+  }, 1500);
+}
+
+async function loadRuns(id){
+  const d = await api('/api/archive/jobs/'+id+'/runs');
+  const items = d.items||[];
+  if(!items.length){
+    $('historyBox').innerHTML = `
+      <div class="empty-state">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9M3 12h9M3 12V3"/><path d="M3 3l9 9"/></svg>
+        <div class="empty-title">暂无运行记录</div>
+        <div class="empty-desc">该任务尚未运行过</div>
+      </div>`;
+    return;
+  }
+  $('historyBox').innerHTML = items.map(r=>`
+    <div class="history-item">
+      <span class="badge ${r.status}">${esc(r.status)}</span>
+      <span class="t">${fmtTime(r.started_at)}</span>
+      &nbsp;扫描 <b>${r.scanned_files}</b> · 生成 <b>${r.strms_created}</b> · 删除 <b>${r.deleted_files}</b>
+      ${r.failed_files&&r.failed_files.length?`<div class="err">失败: ${esc(r.failed_files.slice(0,5).join('; '))}${r.failed_files.length>5?'...':''}</div>`:''}
+      ${r.errors&&r.errors.length?`<div class="err">${esc(r.errors.join('; '))}</div>`:''}
+    </div>`).join('');
+}
+
+// ---------- 云盘文件夹选择器(树形) ----------
+const folderNodes = {};
+let folderRoot = [];
+let folderRootLoaded = false;
+let folderSelected = null; // key
+
+async function openFolderPicker() {
+  folderSelected = null;
+  document.getElementById('folderDlg').classList.add('show');
+  if (!folderRootLoaded) folderLoadDir(null);
+  else folderRender();
+}
+function closeFolderPicker() {
+  document.getElementById('folderDlg').classList.remove('show');
+}
+async function folderLoadDir(node) {
+  const pid = (node && node.fileId) || 0;
+  if (node && node.loaded) return;
+  const tree = document.getElementById('folderTree');
+  if (!node) {
+    folderRootLoaded = false;
+    tree.innerHTML = '<div class="pan-loading"><span class="loading-spinner"></span> 正在加载网盘目录...</div>';
+  }
+  try {
+    const j = await api('/api/pan/list?parentFileId=' + pid);
+    const children = [];
+    for (const it of (j.items || [])) {
+      if (it.type !== 1) continue; // 只显示文件夹
+      const key = String(it.fileId);
+      folderNodes[key] = { key, fileId: it.fileId, name: it.name, parent: node || null, children: null, loaded: false, expanded: false };
+      children.push(folderNodes[key]);
+    }
+    if (node) {
+      node.children = children;
+      node.loaded = true;
+    } else {
+      folderRoot = children;
+      folderRootLoaded = true;
+    }
+    folderRender();
+  } catch (e) {
+    if (!node) {
+      folderRootLoaded = true;
+      tree.innerHTML = '<div class="pan-empty">加载失败: ' + esc(e.message) + '</div>';
+    }
+  }
+}
+function folderToggle(key) {
+  const n = folderNodes[key];
+  if (!n) return;
+  n.expanded = !n.expanded;
+  if (n.expanded && !n.loaded) folderLoadDir(n);
+  else folderRender();
+}
+function folderSelect(key) {
+  folderSelected = key;
+  folderRender();
+}
+function folderCrumbText(n) {
+  if (!n) return '根目录';
+  return folderCrumbText(n.parent) + ' / ' + n.name;
+}
+function folderRender() {
+  const tree = document.getElementById('folderTree');
+  if (!folderRootLoaded) {
+    tree.innerHTML = '<div class="pan-loading"><span class="loading-spinner"></span> 正在加载网盘目录...</div>';
+    return;
+  }
+  const renderNode = (n, depth) => {
+    const selected = folderSelected === n.key;
+    let h = '<div class="pan-row' + (selected ? ' selected' : '') + '" onclick="folderSelect(\'' + n.key + '\')" style="padding-left:' + (depth * 16 + 6) + 'px">';
+    h += '<span class="pan-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></span>';
+    h += '<span class="pan-chevron' + (n.expanded ? ' open' : '') + '" onclick="event.stopPropagation();folderToggle(\'' + n.key + '\')">' +
+         '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="width:11px;height:11px"><polyline points="9 18 15 12 9 6"/></svg></span>';
+    h += '<span class="pan-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>';
+    h += '<span class="pan-name">' + esc(n.name) + '</span>';
+    h += '</div>';
+    if (n.expanded) {
+      h += '<div class="pan-children">';
+      if (!n.loaded) {
+        h += '<div class="pan-loading" style="padding:12px 0"><span class="loading-spinner"></span> 加载中...</div>';
+      } else if (n.children && n.children.length) {
+        for (const c of n.children) h += renderNode(c, depth + 1);
+      } else {
+        h += '<div class="pan-empty" style="padding:10px 0">(空文件夹)</div>';
+      }
+      h += '</div>';
+    }
+    return h;
+  };
+  let html = '';
+  for (const n of folderRoot) html += renderNode(n, 0);
+  tree.innerHTML = html || '<div class="pan-empty">网盘为空</div>';
+  document.getElementById('dirCrumb').textContent = folderSelected && folderNodes[folderSelected]
+    ? folderCrumbText(folderNodes[folderSelected]) : '根目录';
+}
+function folderConfirm() {
+  if (!folderSelected || !folderNodes[folderSelected]) {
+    alert('请先在左侧树中选择一个文件夹');
+    return;
+  }
+  const n = folderNodes[folderSelected];
+  $('f_fid').value = n.fileId;
+  $('f_fname').value = n.name;
+  closeFolderPicker();
+}
+document.getElementById('folderDlg').addEventListener('click', e => {
+  if (e.target.id === 'folderDlg') closeFolderPicker();
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') closeFolderPicker();
+});
+
+function initTheme() {
+  const saved = localStorage.getItem('vp-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', saved);
+  updateThemeIcon(saved);
+}
+function toggleTheme() {
+  const cur = document.documentElement.getAttribute('data-theme');
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('vp-theme', next);
+  updateThemeIcon(next);
+}
+function updateThemeIcon(theme) {
+  $('themeToggle').innerHTML = theme === 'dark'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+}
+
+initTheme();
+loadJobs();
+</script>
+</body>
+</html>
