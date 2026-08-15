@@ -180,6 +180,7 @@ func (a *App) syncCore(expectedStrm, expectedSubs map[string]bool, strmMap, subM
 	a.cleanupEmptyDirs(scanRoot, outRootDir)
 
 	// 生成缺失的 STRM（并行 8）
+	var mu sync.Mutex // 保护 result map 的并发写入
 	createStrm := func(strmPath string) {
 		fileInfo, ok := strmMap[strmPath]
 		if !ok {
@@ -189,11 +190,15 @@ func (a *App) syncCore(expectedStrm, expectedSubs map[string]bool, strmMap, subM
 		url := makePlayURL(serverBase, int(firstInt64(fileInfo, "idx")), asString(fileInfo["etag"]), firstInt64(fileInfo, "size"), fileName)
 		os.MkdirAll(filepath.Dir(strmPath), 0o755)
 		os.WriteFile(strmPath, []byte(url+"\n"), 0o644)
+		mu.Lock()
 		result["created_strm"] = append(result["created_strm"].([]string), relOf(strmPath))
+		mu.Unlock()
 	}
 	parallelStrings(toCreateStrm, 8, func(s string) {
 		if err := safeRun(func() { createStrm(s) }); err != nil {
+			mu.Lock()
 			result["errors"] = append(result["errors"].([]string), "生成 STRM 失败 "+s+": "+err.Error())
+			mu.Unlock()
 		}
 	})
 
@@ -212,12 +217,16 @@ func (a *App) syncCore(expectedStrm, expectedSubs map[string]bool, strmMap, subM
 				return
 			}
 			if a.downloadSubtitleFile(fileInfo, subPath, asBool(fastMode)) {
+				mu.Lock()
 				result["created_subs"] = append(result["created_subs"].([]string), relOf(subPath))
+				mu.Unlock()
 			}
 		}
 		parallelStrings(toCreateSubs, 8, func(s string) {
 			if err := safeRun(func() { downloadSub(s) }); err != nil {
+				mu.Lock()
 				result["errors"] = append(result["errors"].([]string), "下载字幕失败 "+s+": "+err.Error())
+				mu.Unlock()
 			}
 		})
 	}
