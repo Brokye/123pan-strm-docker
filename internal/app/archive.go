@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -342,7 +343,7 @@ func (a *App) archiveJobRun(job ArchiveJob, emit func(map[string]any)) {
 		fileMu.Unlock()
 	}
 
-	// 第一阶段: 视频 STRM(并行写文件, 8 并发)
+	// 第一阶段: 视频 STRM(复用 parallelStrings, 8 并发)
 	videoOK := 0
 	for i := range files {
 		ext := strings.ToLower(filepath.Ext(safeRelPath(files[i].Path)))
@@ -350,74 +351,62 @@ func (a *App) archiveJobRun(job ArchiveJob, emit func(map[string]any)) {
 			videoOnly++
 		}
 	}
-	var vg sync.WaitGroup
-	vsem := make(chan struct{}, 8)
 	var progMu sync.Mutex
 	done := 0
+	videoSet := map[string]bool{}
 	for i := range files {
-		f := &files[i]
-		ext := strings.ToLower(filepath.Ext(safeRelPath(f.Path)))
-		if !VIDEO_EXTS[ext] {
-			continue
+		ext := strings.ToLower(filepath.Ext(safeRelPath(files[i].Path)))
+		if VIDEO_EXTS[ext] {
+			videoSet[strconv.Itoa(i)] = true
 		}
-		vg.Add(1)
-		go func(f *archiveItem) {
-			defer vg.Done()
-			vsem <- struct{}{}
-			defer func() { <-vsem }()
-			rel := safeRelPath(f.Path)
-			target := filepath.Join(outRoot, relWithoutSuffix(rel, ext)+".strm")
-			os.MkdirAll(filepath.Dir(target), 0o755)
-			url := makePlayURL(serverBase, libIdx[f.FileId], f.Etag, f.Size, filepath.Base(rel))
-			if err := os.WriteFile(target, []byte(url+"\n"), 0o644); err != nil {
-				mark(f, false)
-				log.Printf("[归档] STRM 写入失败 %s: %v", target, err)
-			} else {
-				mark(f, true)
-				progMu.Lock()
-				videoOK++
-				progMu.Unlock()
-			}
-			progMu.Lock()
-			done++
-			d := done
-			progMu.Unlock()
-			emit(map[string]any{"message": fmt.Sprintf("生成 STRM %d/%d...", d, videoOnly),
-				"progress": 40 + int(float64(d)/float64(maxInt(videoOnly, 1))*25)})
-		}(f)
 	}
-	vg.Wait()
+	parallelStrings(videoSet, 8, func(key string) {
+		idx, _ := strconv.Atoi(key)
+		f := &files[idx]
+		rel := safeRelPath(f.Path)
+		ext := strings.ToLower(filepath.Ext(rel))
+		target := filepath.Join(outRoot, relWithoutSuffix(rel, ext)+".strm")
+		os.MkdirAll(filepath.Dir(target), 0o755)
+		url := makePlayURL(serverBase, libIdx[f.FileId], f.Etag, f.Size, filepath.Base(rel))
+		if err := os.WriteFile(target, []byte(url+"\n"), 0o644); err != nil {
+			mark(f, false)
+			log.Printf("[归档] STRM 写入失败 %s: %v", target, err)
+		} else {
+			mark(f, true)
+			progMu.Lock()
+			videoOK++
+			progMu.Unlock()
+		}
+		progMu.Lock()
+		done++
+		d := done
+		progMu.Unlock()
+		emit(map[string]any{"message": fmt.Sprintf("生成 STRM %d/%d...", d, videoOnly),
+			"progress": 40 + int(float64(d)/float64(maxInt(videoOnly, 1))*25)})
+	})
 
-	// 第二阶段: 字幕并行下载(8 并发, 与主页同步 STRM 一致)
+	// 第二阶段: 字幕并行下载(复用 parallelStrings, 8 并发)
 	if job.IncludeSubtitles {
-		var subs []*archiveItem
+		subSet := map[string]bool{}
 		for i := range files {
-			f := &files[i]
-			ext := strings.ToLower(filepath.Ext(safeRelPath(f.Path)))
+			ext := strings.ToLower(filepath.Ext(safeRelPath(files[i].Path)))
 			if SUBTITLE_EXTS[ext] {
-				subs = append(subs, &files[i])
+				subSet[strconv.Itoa(i)] = true
 			}
 		}
-		var wg sync.WaitGroup
-		sem := make(chan struct{}, 8)
-		for _, f := range subs {
-			wg.Add(1)
-			go func(f *archiveItem) {
-				defer wg.Done()
-				sem <- struct{}{}
-				defer func() { <-sem }()
-				rel := safeRelPath(f.Path)
-				target := filepath.Join(outRoot, rel)
-				ok := a.downloadSubtitleFile(map[string]any{"path": f.Path, "etag": f.Etag, "size": f.Size}, target, fastMode)
-				mark(f, ok)
-				suffix := ""
-				if !ok {
-					suffix = " (失败)"
-				}
-				emit(map[string]any{"message": "下载字幕 " + f.Name + suffix, "progress": 68})
-			}(f)
-		}
-		wg.Wait()
+		parallelStrings(subSet, 8, func(key string) {
+			idx, _ := strconv.Atoi(key)
+			f := &files[idx]
+			rel := safeRelPath(f.Path)
+			target := filepath.Join(outRoot, rel)
+			ok := a.downloadSubtitleFile(map[string]any{"path": f.Path, "etag": f.Etag, "size": f.Size}, target, fastMode)
+			mark(f, ok)
+			suffix := ""
+			if !ok {
+				suffix = " (失败)"
+			}
+			emit(map[string]any{"message": "下载字幕 " + f.Name + suffix, "progress": 68})
+		})
 		emit(map[string]any{"message": "字幕下载完成", "progress": 70})
 	}
 
@@ -462,61 +451,57 @@ func (a *App) archiveJobRun(job ArchiveJob, emit func(map[string]any)) {
 			"failed_files": failedPaths, "lib_id": asString(lib["id"])}})
 }
 
-// archiveScan: 并行递归扫描文件夹(BFS + goroutine 池, 与主页"盘内文件生成"同速)
+// archiveScan: 并行递归扫描文件夹(BFS, 每层复用 parallelStrings)
 func (a *App) archiveScan(driver *Pan123, folderID int64, rootName string) ([]archiveItem, []archiveItem) {
 	files := []archiveItem{}
 	folders := []archiveItem{}
 	queue := []archiveItem{{FileId: folderID, IsDir: true, Path: ""}}
 	var mu sync.Mutex
-	const workers = 8
-	sem := make(chan struct{}, workers)
 
 	for len(queue) > 0 {
 		batch := queue
 		queue = []archiveItem{}
-		var wg sync.WaitGroup
-		for _, t := range batch {
-			wg.Add(1)
-			go func(t archiveItem) {
-				defer wg.Done()
-				sem <- struct{}{}
-				defer func() { <-sem }()
-				r := driver.listFilesSingle(t.FileId)
-				var out []archiveItem
-				if e, ok := r["error"]; ok {
-					log.Printf("[归档] 扫描失败 %s: %v", t.Path, e)
-				} else {
-					for _, it := range asAnySlice(r["items"]) {
-						im, _ := it.(map[string]any)
-						fid := int64(asFloat(im["FileId"]))
-						name := asString(im["FileName"])
-						cpath := name
-						if t.Path != "" {
-							cpath = t.Path + "/" + name
-						}
-						if typ, _ := im["Type"].(float64); typ == 1 {
-							out = append(out, archiveItem{FileId: fid, Name: name, Path: cpath, IsDir: true})
-						} else {
-							out = append(out, archiveItem{
-								FileId: fid, Name: name, Path: cpath,
-								Size: int64(asFloat(im["Size"])), Etag: asString(im["Etag"]),
-							})
-						}
-					}
-				}
-				mu.Lock()
-				for _, it := range out {
-					if it.IsDir {
-						folders = append(folders, it)
-						queue = append(queue, it)
-					} else {
-						files = append(files, it)
-					}
-				}
-				mu.Unlock()
-			}(t)
+		layerSet := map[string]bool{}
+		for i := range batch {
+			layerSet[strconv.Itoa(i)] = true
 		}
-		wg.Wait()
+		parallelStrings(layerSet, 8, func(key string) {
+			idx, _ := strconv.Atoi(key)
+			t := batch[idx]
+			r := driver.listFilesSingle(t.FileId)
+			var out []archiveItem
+			if e, ok := r["error"]; ok {
+				log.Printf("[归档] 扫描失败 %s: %v", t.Path, e)
+			} else {
+				for _, it := range asAnySlice(r["items"]) {
+					im, _ := it.(map[string]any)
+					fid := int64(asFloat(im["FileId"]))
+					name := asString(im["FileName"])
+					cpath := name
+					if t.Path != "" {
+						cpath = t.Path + "/" + name
+					}
+					if typ, _ := im["Type"].(float64); typ == 1 {
+						out = append(out, archiveItem{FileId: fid, Name: name, Path: cpath, IsDir: true})
+					} else {
+						out = append(out, archiveItem{
+							FileId: fid, Name: name, Path: cpath,
+							Size: int64(asFloat(im["Size"])), Etag: asString(im["Etag"]),
+						})
+					}
+				}
+			}
+			mu.Lock()
+			for _, it := range out {
+				if it.IsDir {
+					folders = append(folders, it)
+					queue = append(queue, it)
+				} else {
+					files = append(files, it)
+				}
+			}
+			mu.Unlock()
+		})
 	}
 	return files, folders
 }
