@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>123 秒传 STRM · Vision Pro</title>
+<title>123 秒传 STRM</title>
 <style>
 :root {
   --glass-bg: rgba(255, 255, 255, 0.7);
@@ -1129,6 +1129,32 @@ body {
   width: auto;
 }
 
+/* visionOS 风格胶囊按钮（毛玻璃 + 蓝 tint） */
+.vp-btn.vp-pill {
+  border-radius: 999px;
+  padding: 6px 16px;
+  height: 30px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: #0071e3;
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(255,255,255,0.55));
+  border: 1px solid rgba(255,255,255,0.9);
+  box-shadow: 0 2px 10px rgba(0, 113, 227, 0.16), inset 0 1px 0 rgba(255,255,255,0.9);
+  backdrop-filter: blur(14px) saturate(180%);
+  -webkit-backdrop-filter: blur(14px) saturate(180%);
+}
+
+.vp-btn.vp-pill:hover {
+  background: linear-gradient(180deg, #ffffff, rgba(255,255,255,0.75));
+  box-shadow: 0 4px 16px rgba(0, 113, 227, 0.24), inset 0 1px 0 rgba(255,255,255,0.95);
+  transform: translateY(-1px);
+}
+
+.vp-btn.vp-pill:active {
+  transform: scale(0.96);
+}
+
 .hidden-input {
   display: none;
 }
@@ -1711,6 +1737,16 @@ body {
           <input type="text" class="vp-input" id="srvBase" placeholder="192.168.x.x:8000">
         </div>
         
+        <div class="form-group">
+          <label class="form-label">缓存目录（可选）</label>
+          <div style="display:flex;gap:8px">
+            <input type="text" class="vp-input" id="cacheFolderName" placeholder="未指定：播放时自动创建并 24h 清理" readonly style="flex:1;background:rgba(128,128,128,.06)">
+            <button class="vp-btn secondary sm" onclick="openCacheFolderPicker()" title="在网盘中选择一个文件夹作为缓存目录">选择</button>
+            <button class="vp-btn ghost sm" onclick="clearCacheFolder()" title="恢复自动创建模式">清除</button>
+          </div>
+          <p style="margin:6px 0 0;font-size:12px;color:var(--text-dim, #94a3b8)">手动指定后播放直接使用该文件夹，不再自动创建/清理；避免同名冲突可自己建好文件夹再选</p>
+        </div>
+        
         <button class="vp-btn success" onclick="saveCfg()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
             <polyline points="20 6 9 17 4 12"/>
@@ -1944,6 +1980,38 @@ body {
     <div id="dedupList" class="dedup-list"></div>
     <div class="dedup-footer">
       <span class="dedup-progress" id="dedupProgress"></span>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="cfDlg">
+  <div class="vp-modal pan-modal">
+    <div class="modal-header">
+      <div class="modal-icon" style="background:rgba(16,185,129,.12);color:#10b981">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+        </svg>
+      </div>
+      <div>
+        <h3 class="modal-title">选择缓存目录</h3>
+        <p class="modal-desc" style="margin-bottom:0">进入目标文件夹后点"选用当前目录"；选中的文件夹将作为播放缓存目录，不再自动创建/清理</p>
+      </div>
+    </div>
+    <div class="pan-toolbar">
+      <button class="vp-btn secondary sm" onclick="cfBack()">返回</button>
+      <button class="vp-btn secondary sm" onclick="cfLoad()">刷新</button>
+      <span class="pan-count" id="cfPath">根目录</span>
+    </div>
+    <div class="pan-tree" id="cfTree">
+      <div class="pan-loading"><span class="loading-spinner"></span> 正在加载网盘目录...</div>
+    </div>
+    <div class="modal-actions">
+      <div class="modal-actions-left">
+        <button class="vp-btn secondary sm" onclick="closeCf()">取消</button>
+      </div>
+      <div class="modal-actions-right">
+        <button class="vp-btn vp-pill" onclick="cfUseCurrent()">选用当前目录</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2227,6 +2295,103 @@ document.getElementById('fastMode').addEventListener('change', function() {
   });
 });
 
+var cfStack = [0];
+var cfNames = ['根目录'];
+
+async function openCacheFolderPicker() {
+  cfStack = [0];
+  cfNames = ['根目录'];
+  document.getElementById('cfDlg').classList.add('show');
+  await cfLoad();
+}
+
+function closeCf() {
+  document.getElementById('cfDlg').classList.remove('show');
+}
+
+async function cfLoad() {
+  var tree = document.getElementById('cfTree');
+  var pid = cfStack[cfStack.length - 1];
+  document.getElementById('cfPath').textContent = cfNames.join(' / ');
+  tree.innerHTML = '<div class="pan-loading"><span class="loading-spinner"></span> 正在加载网盘目录...</div>';
+  try {
+    var d = await api('/api/pan/list?parentFileId=' + pid);
+    var items = (d.items || []).filter(function(it) { return Number(it.type) === 1; });
+    if (!items.length) {
+      tree.innerHTML = '<div class="pan-empty">该目录下没有文件夹，可直接点"选用当前目录"</div>';
+      return;
+    }
+    var h = '';
+    for (var i = 0; i < items.length; i++) {
+      (function(it) {
+        var name = String(it.name || '');
+        h += '<div class="pan-node">';
+        h += '<div class="pan-row" style="cursor:pointer" onclick="cfEnter(' + it.fileId + ')">';
+        h += '<span class="pan-icon folder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg></span>';
+        h += '<span class="pan-name">' + esc(name) + '</span>';
+        h += '</div>';
+        h += '<button class="vp-btn vp-pill" onclick="event.stopPropagation();cfSelect(' + it.fileId + ')">选用</button>';
+        h += '</div>';
+      })(items[i]);
+    }
+    tree.innerHTML = h;
+    // 记住当前目录对应的文件夹名，供"选用当前目录"使用
+    window._cfNameMap = {};
+    for (var j = 0; j < items.length; j++) window._cfNameMap[items[j].fileId] = String(items[j].name || '');
+  } catch(e) {
+    tree.innerHTML = '<div class="pan-empty" style="color:#ef4444">加载失败：' + esc(e.message) + '</div>';
+  }
+}
+
+function cfEnter(fid) {
+  var name = (window._cfNameMap || {})[fid] || ('目录_' + fid);
+  cfStack.push(fid);
+  cfNames.push(name);
+  cfLoad();
+}
+
+function cfBack() {
+  if (cfStack.length > 1) {
+    cfStack.pop();
+    cfNames.pop();
+    cfLoad();
+  }
+}
+
+function cfUseCurrent() {
+  cfSelect(cfStack[cfStack.length - 1]);
+}
+
+async function cfSelect(fid) {
+  var name = (window._cfNameMap || {})[fid] || cfNames[cfNames.length - 1] || '';
+  try {
+    await api('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cache_folder_id: fid, cache_folder_name: name })
+    });
+    closeCf();
+    loadCfg();
+    log('✓ 缓存目录已设为：' + name);
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function clearCacheFolder() {
+  try {
+    await api('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ cache_folder_id: 0, cache_folder_name: '' })
+    });
+    loadCfg();
+    log('✓ 已恢复自动创建缓存目录模式');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
 async function loadCfg() {
   try {
     var c = await api('/api/config');
@@ -2234,6 +2399,8 @@ async function loadCfg() {
     document.getElementById('srvBase').value = c.server_base || '';
     document.getElementById('panUser').value = c.pan_username || '';
     document.getElementById('panPass').value = c.pan_password || '';
+    var cfEl = document.getElementById('cacheFolderName');
+    if (cfEl) cfEl.value = (Number(c.cache_folder_id) > 0) ? (c.cache_folder_name || ('文件夹 ' + c.cache_folder_id)) : '';
   } catch(e) {
     log('配置加载中...');
   }
@@ -3385,7 +3552,7 @@ document.querySelectorAll('.modal-overlay').forEach(function(overlay) {
   });
 });
 
-log('🚀 123 秒传 STRM Vision Pro 版已启动');
+log('🚀 123 秒传 STRM 已启动');
 log('正在加载配置...');
 loadMode();
 loadCfg();

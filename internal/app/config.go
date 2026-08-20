@@ -185,6 +185,12 @@ func (c *Config) Config() map[string]any {
 	if _, ok := out["pan_password"]; !ok {
 		out["pan_password"] = c.Settings()["123PAN_PASSWORD"]
 	}
+	if _, ok := out["cache_folder_id"]; !ok {
+		out["cache_folder_id"] = int64(c.getIntSetting("CACHE_FOLDER_ID", 0))
+	}
+	if _, ok := out["cache_folder_name"]; !ok {
+		out["cache_folder_name"] = ""
+	}
 	return out
 }
 

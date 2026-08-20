@@ -76,6 +76,8 @@ type ConfigReq struct {
 	IncludeSubtitles bool   `json:"include_subtitles"`
 	PanUsername      string `json:"pan_username"`
 	PanPassword      string `json:"pan_password"`
+	CacheFolderID    *int64 `json:"cache_folder_id"`
+	CacheFolderName  string `json:"cache_folder_name"`
 }
 
 type UpdateLibReq struct {

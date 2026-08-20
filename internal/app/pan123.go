@@ -268,7 +268,8 @@ func (p *Pan123) createFolder(parentFileId int64, folderName string, rawData boo
 	if err != nil {
 		return map[string]any{"isFinish": false, "message": "创建文件夹请求发生异常: " + err.Error()}
 	}
-	if code, _ := rd["code"].(float64); code == 0 {
+	code, _ := rd["code"].(float64)
+	if code == 0 {
 		if rawData {
 			return map[string]any{"isFinish": true, "message": rd["data"]}
 		}
@@ -277,9 +278,43 @@ func (p *Pan123) createFolder(parentFileId int64, folderName string, rawData boo
 		log.Printf("[123] 创建文件夹成功: %s, fileId=%d", folderName, int64(fileId))
 		return map[string]any{"isFinish": true, "message": int64(fileId)}
 	}
+	// 同名冲突(5060)：同目录下若已存在同名文件夹则直接复用其 FileId，避免创建被拒
+	if code == 5060 {
+		if fid := p.findSameNameFolder(parentFileId, folderName); fid > 0 {
+			log.Printf("[123] 同名文件夹已存在，直接复用: %s, fileId=%d", folderName, fid)
+			if rawData {
+				return map[string]any{"isFinish": true, "message": map[string]any{
+					"Info": map[string]any{"FileId": float64(fid)},
+				}}
+			}
+			return map[string]any{"isFinish": true, "message": fid}
+		}
+	}
 	b, _ := json.Marshal(rd)
 	log.Printf("[123] 创建文件夹失败: %s: %s", folderName, truncate(string(b), 200))
 	return map[string]any{"isFinish": false, "message": "创建文件夹失败：" + string(b)}
+}
+
+// findSameNameFolder: 在 parentFileId 目录下查找同名文件夹，返回其 FileId；不存在或查询失败返回 0
+func (p *Pan123) findSameNameFolder(parentFileId int64, folderName string) int64 {
+	res := p.listFilesSingle(parentFileId)
+	if errMsg, ok := res["error"].(string); ok && errMsg != "" {
+		log.Printf("[123] 查询同名文件夹失败: %s", errMsg)
+		return 0
+	}
+	items, _ := res["items"].([]any)
+	for _, it := range items {
+		info, _ := it.(map[string]any)
+		if info == nil {
+			continue
+		}
+		name, _ := info["FileName"].(string)
+		typ := int64(asFloat(info["Type"]))
+		if name == folderName && typ == 1 {
+			return int64(asFloat(info["FileId"]))
+		}
+	}
+	return 0
 }
 
 func (p *Pan123) uploadFile(etag, fileName string, parentFileId int64, size int64, rawData bool) map[string]any {

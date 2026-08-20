@@ -81,21 +81,35 @@ func (a *App) getFileURLOnce(name, etag string, size int64, fastMode bool) strin
 		WriteJSONFile(a.cfg.CachePath, cacheData)
 	}
 
-	actionResult := driver.createFolder(0, "__缓存目录_无视即可_24h自动清理__123Pan-Unlimited-WebDAV", true)
-	if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
-		log.Printf("[播放] 创建缓存目录失败: %v", actionResult["message"])
-		return "http://222.186.21.40:33333/NGGYU.mp4"
-	}
-	cacheFolderInfo, _ := actionResult["message"].(map[string]any)
-	cacheFolderInfo2, _ := cacheFolderInfo["Info"].(map[string]any)
+	// 缓存目录：优先使用管理页面手动指定的文件夹（不再自动创建/清理）；
+	// 未指定时保持自动创建 + 24h 自动清理
 	cacheFolderId := int64(0)
-	if fid, ok := cacheFolderInfo2["FileId"].(float64); ok {
-		cacheFolderId = int64(fid)
+	manualCacheFolder := false
+	var actionResult map[string]any
+	var cacheFolderInfo2 map[string]any
+	if v, ok := a.cfg.Config()["cache_folder_id"].(float64); ok && int64(v) > 0 {
+		cacheFolderId = int64(v)
+		manualCacheFolder = true
+	} else {
+		actionResult = driver.createFolder(0, "__缓存目录_无视即可_24h自动清理__123Pan-Unlimited-WebDAV", true)
+		if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+			log.Printf("[播放] 创建缓存目录失败: %v", actionResult["message"])
+			return "http://222.186.21.40:33333/NGGYU.mp4"
+		}
+		cacheFolderInfo, _ := actionResult["message"].(map[string]any)
+		cacheFolderInfo2, _ = cacheFolderInfo["Info"].(map[string]any)
+		if fid, ok := cacheFolderInfo2["FileId"].(float64); ok {
+			cacheFolderId = int64(fid)
+		}
 	}
 
 	actionResult = driver.uploadFile(etag, name, cacheFolderId, size, true)
 	if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
-		log.Printf("[播放] 秒传上传失败: %s: %v", name, actionResult["message"])
+		if manualCacheFolder {
+			log.Printf("[播放] 秒传上传失败(缓存目录 fileId=%d 可能已失效，请到管理页面重新选择缓存目录): %s: %v", cacheFolderId, name, actionResult["message"])
+		} else {
+			log.Printf("[播放] 秒传上传失败: %s: %v", name, actionResult["message"])
+		}
 		return "http://222.186.21.40:33333/NGGYU.mp4"
 	}
 	fileData, _ := actionResult["message"].(map[string]any)
@@ -115,21 +129,24 @@ func (a *App) getFileURLOnce(name, etag string, size int64, fastMode bool) strin
 	}
 	downloadLink, _ := actionResult["message"].(string)
 
-	// 删除缓存文件夹（24h 清理）
-	if ld, ok := cacheData["lastDeleteTime"]; !ok || ld == "" {
-		cacheData["lastDeleteTime"] = float64(time.Now().Unix())
-		WriteJSONFile(a.cfg.CachePath, cacheData)
-	}
-	lastDel, _ := cacheData["lastDeleteTime"].(float64)
-	if time.Now().Unix()-int64(lastDel) > 24*60*60 {
-		actionResult = driver.deleteFile([]map[string]any{cacheFolderInfo2}, true)
-		if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
-			log.Printf("[播放] 24h清理删除缓存目录失败: %v", actionResult["message"])
-			return "http://222.186.21.40:33333/NGGYU.mp4"
+	// 删除缓存文件夹（24h 清理）——仅在自动创建缓存目录模式下生效，
+	// 手动指定的文件夹由用户自行管理，不自动删除
+	if !manualCacheFolder {
+		if ld, ok := cacheData["lastDeleteTime"]; !ok || ld == "" {
+			cacheData["lastDeleteTime"] = float64(time.Now().Unix())
+			WriteJSONFile(a.cfg.CachePath, cacheData)
 		}
-		log.Printf("[播放] 24h清理：已彻底删除缓存目录 fileId=%d", cacheFolderId)
-		cacheData["lastDeleteTime"] = float64(time.Now().Unix())
-		WriteJSONFile(a.cfg.CachePath, cacheData)
+		lastDel, _ := cacheData["lastDeleteTime"].(float64)
+		if time.Now().Unix()-int64(lastDel) > 24*60*60 {
+			actionResult = driver.deleteFile([]map[string]any{cacheFolderInfo2}, true)
+			if isFinish, _ := actionResult["isFinish"].(bool); !isFinish {
+				log.Printf("[播放] 24h清理删除缓存目录失败: %v", actionResult["message"])
+				return "http://222.186.21.40:33333/NGGYU.mp4"
+			}
+			log.Printf("[播放] 24h清理：已彻底删除缓存目录 fileId=%d", cacheFolderId)
+			cacheData["lastDeleteTime"] = float64(time.Now().Unix())
+			WriteJSONFile(a.cfg.CachePath, cacheData)
+		}
 	}
 
 	// 解析跳转链接

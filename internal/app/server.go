@@ -160,6 +160,14 @@ func (a *App) handleConfig(w http.ResponseWriter, r *http.Request) {
 		if req.PanPassword != "" {
 			c["pan_password"] = req.PanPassword
 		}
+		if req.CacheFolderID != nil {
+			c["cache_folder_id"] = *req.CacheFolderID
+			if req.CacheFolderName != "" {
+				c["cache_folder_name"] = req.CacheFolderName
+			} else if *req.CacheFolderID == 0 {
+				c["cache_folder_name"] = ""
+			}
+		}
 		c["include_subtitles"] = req.IncludeSubtitles
 		a.cfg.SaveConfig(c)
 		a.cfg.UpdateSettingsAccount(asString(c["pan_username"]), asString(c["pan_password"]))

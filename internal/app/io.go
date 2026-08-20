@@ -49,6 +49,7 @@ var settingsYAMLOrder = []string{
 	"WEBDAV_PORT",
 	"123PAN_USERNAME",
 	"123PAN_PASSWORD",
+	"CACHE_FOLDER_ID",
 	"SPLIT_FOLDER",
 }
 
