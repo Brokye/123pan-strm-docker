@@ -215,7 +215,8 @@ func (a *App) panExportTask(driver *Pan123, folders, files []map[string]any) fun
 		errors := []string{}
 		var mu sync.Mutex
 
-		// 用有限 goroutine 池逐层扫描
+		// 用有限 goroutine 池逐层扫描，全局并发上限 16，避免触发 123 网盘 API 限流
+		sem := make(chan struct{}, 16)
 		for len(queue) > 0 {
 			batch := queue
 			queue = []task{}
@@ -230,6 +231,8 @@ func (a *App) panExportTask(driver *Pan123, folders, files []map[string]any) fun
 				wg.Add(1)
 				go func(t task) {
 					defer wg.Done()
+					sem <- struct{}{}
+					defer func() { <-sem }()
 					res := driver.listFilesSingle(t.fid)
 					if e, ok := res["error"]; ok {
 						results <- scanResult{t: t, err: asString(e)}
