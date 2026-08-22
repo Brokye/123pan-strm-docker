@@ -465,10 +465,12 @@ func (a *App) archiveScan(driver *Pan123, folderID int64, rootName string) ([]ar
 		for i := range batch {
 			layerSet[strconv.Itoa(i)] = true
 		}
-		parallelStrings(layerSet, 8, func(key string) {
+		// 4 并发 + 错峰 + 限流退避重试,避免 123 个人盘接口频控(100011 请勿频繁操作)
+		parallelStrings(layerSet, 4, func(key string) {
 			idx, _ := strconv.Atoi(key)
 			t := batch[idx]
-			r := driver.listFilesSingle(t.FileId)
+			time.Sleep(250 * time.Millisecond)
+			r := driver.listFilesWithRetry(t.FileId)
 			var out []archiveItem
 			if e, ok := r["error"]; ok {
 				log.Printf("[归档] 扫描失败 %s: %v", t.Path, e)

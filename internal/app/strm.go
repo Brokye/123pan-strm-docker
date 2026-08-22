@@ -215,24 +215,8 @@ func (a *App) panExportTask(driver *Pan123, folders, files []map[string]any) fun
 		errors := []string{}
 		var mu sync.Mutex
 
-		// 有限并发扫描:4 并发 + 请求错峰 + 限流退避重试。
+		// 有限并发扫描:4 并发 + 请求错峰 + 限流退避重试(listFilesWithRetry)。
 		// 123 个人盘 /file/list 接口频控严格,并发过高会触发"请勿频繁操作"(code 100011)
-		scanFolder := func(fid int64) map[string]any {
-			for attempt := 0; attempt < 5; attempt++ {
-				res := driver.listFilesSingle(fid)
-				if e, ok := res["error"]; ok {
-					msg := asString(e)
-					if strings.Contains(msg, "频繁") || strings.Contains(msg, "稍后再试") {
-						backoff := 5 * (attempt + 1)
-						log.Printf("[导出] 扫描被限流(%s)，%d 秒后重试(%d/5)", msg, backoff, attempt+1)
-						time.Sleep(time.Duration(backoff) * time.Second)
-						continue
-					}
-				}
-				return res
-			}
-			return map[string]any{"error": "重试 5 次仍被限流，请稍后再试"}
-		}
 		sem := make(chan struct{}, 4)
 		for len(queue) > 0 {
 			batch := queue
@@ -251,7 +235,7 @@ func (a *App) panExportTask(driver *Pan123, folders, files []map[string]any) fun
 					sem <- struct{}{}
 					defer func() { <-sem }()
 					time.Sleep(250 * time.Millisecond) // 错峰,避免并发请求突发触发限流
-					res := scanFolder(t.fid)
+					res := driver.listFilesWithRetry(t.fid)
 					if e, ok := res["error"]; ok {
 						results <- scanResult{t: t, err: asString(e)}
 						return

@@ -252,6 +252,25 @@ func (p *Pan123) listFilesSingle(parentFileId int64) map[string]any {
 	return map[string]any{"items": allItems}
 }
 
+// listFilesWithRetry: listFilesSingle + 限流自动退避重试。
+// 123 个人盘接口频控严格(100011 请勿频繁操作),批量扫描时必须带重试
+func (p *Pan123) listFilesWithRetry(parentFileId int64) map[string]any {
+	for attempt := 0; attempt < 5; attempt++ {
+		res := p.listFilesSingle(parentFileId)
+		if e, ok := res["error"]; ok {
+			msg := asString(e)
+			if strings.Contains(msg, "频繁") || strings.Contains(msg, "稍后再试") {
+				backoff := 5 * (attempt + 1)
+				log.Printf("[123] 列表请求被限流(%s)，%d 秒后重试(%d/5)", msg, backoff, attempt+1)
+				time.Sleep(time.Duration(backoff) * time.Second)
+				continue
+			}
+		}
+		return res
+	}
+	return map[string]any{"error": "重试 5 次仍被限流，请稍后再试"}
+}
+
 func (p *Pan123) createFolder(parentFileId int64, folderName string, rawData bool) map[string]any {
 	folderName = strings.NewReplacer(
 		":", "：", "/", "／", "\\", "＼", "*", "＊", "?", "？",
