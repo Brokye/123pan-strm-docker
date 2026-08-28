@@ -662,6 +662,7 @@ func (a *App) handleArchiveJobItem(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, 200, map[string]any{"ok": true})
 			return
 		}
+		
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
