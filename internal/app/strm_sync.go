@@ -18,11 +18,11 @@ func (a *App) catRoot(outputDir, category string) string {
 	return root
 }
 
-// getExpectedFiles: 计算期望生成的 STRM 和字幕文件
-func (a *App) getExpectedFiles(lib map[string]any, outputDir string, includeSubtitles bool) ([]string, []string) {
+// getExpectedFiles: 计算期望生成的 STRM 和附属文件（字幕/nfo/图片）
+func (a *App) getExpectedFiles(lib map[string]any, outputDir string, ds downloadSettings) ([]string, []string) {
 	category, _ := lib["category"].(string)
 	outRoot := a.catRoot(outputDir, category)
-	var strmFiles, subtitleFiles []string
+	var strmFiles, sideFiles []string
 	files, _ := lib["files"].([]any)
 	for _, f := range files {
 		fm, ok := f.(map[string]any)
@@ -33,35 +33,37 @@ func (a *App) getExpectedFiles(lib map[string]any, outputDir string, includeSubt
 		ext := strings.ToLower(filepath.Ext(rel))
 		if VIDEO_EXTS[ext] {
 			strmFiles = append(strmFiles, filepath.Join(outRoot, relWithoutSuffix(rel, ext)+".strm"))
-		} else if includeSubtitles && SUBTITLE_EXTS[ext] {
-			subtitleFiles = append(subtitleFiles, filepath.Join(outRoot, rel))
+		} else if kind := sidecarType(ext); kind != "" && ds.wants(kind) {
+			sideFiles = append(sideFiles, filepath.Join(outRoot, rel))
 		}
 	}
-	return strmFiles, subtitleFiles
+	return strmFiles, sideFiles
 }
 
-func getExistingFiles(scanRoot string) ([]string, []string) {
+// getExistingFiles: 扫描输出目录中已有的 STRM 与需要管理的附属文件。
+// 只统计“当前启用类型”的附属文件，避免误删用户手动放置的其它元数据。
+func getExistingFiles(scanRoot string, ds downloadSettings) ([]string, []string) {
 	if _, err := os.Stat(scanRoot); err != nil {
 		return nil, nil
 	}
-	var strmFiles, subtitleFiles []string
+	var strmFiles, sideFiles []string
 	filepath.Walk(scanRoot, func(p string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() {
 			return nil
 		}
 		if strings.EqualFold(filepath.Ext(p), ".strm") {
 			strmFiles = append(strmFiles, p)
-		} else if SUBTITLE_EXTS[strings.ToLower(filepath.Ext(p))] {
-			subtitleFiles = append(subtitleFiles, p)
+		} else if kind := sidecarType(strings.ToLower(filepath.Ext(p))); kind != "" && ds.wants(kind) {
+			sideFiles = append(sideFiles, p)
 		}
 		return nil
 	})
-	return strmFiles, subtitleFiles
+	return strmFiles, sideFiles
 }
 
-func collectExpected(libs []map[string]any, outputDir string, includeSubtitles bool) (map[string]bool, map[string]bool, map[string]map[string]any, map[string]map[string]any) {
+func collectExpected(libs []map[string]any, outputDir string, ds downloadSettings) (map[string]bool, map[string]bool, map[string]map[string]any, map[string]map[string]any) {
 	strmMap := map[string]map[string]any{}
-	subMap := map[string]map[string]any{}
+	sideMap := map[string]map[string]any{}
 	for _, lib := range libs {
 		category, _ := lib["category"].(string)
 		catRoot := a_catRoot(outputDir, category)
@@ -78,10 +80,10 @@ func collectExpected(libs []map[string]any, outputDir string, includeSubtitles b
 				if _, exists := strmMap[key]; !exists {
 					strmMap[key] = fm
 				}
-			} else if includeSubtitles && SUBTITLE_EXTS[ext] {
+			} else if kind := sidecarType(ext); kind != "" && ds.wants(kind) {
 				key := filepath.Join(catRoot, rel)
-				if _, exists := subMap[key]; !exists {
-					subMap[key] = fm
+				if _, exists := sideMap[key]; !exists {
+					sideMap[key] = fm
 				}
 			}
 		}
@@ -90,11 +92,11 @@ func collectExpected(libs []map[string]any, outputDir string, includeSubtitles b
 	for k := range strmMap {
 		strmSet[k] = true
 	}
-	subSet := map[string]bool{}
-	for k := range subMap {
-		subSet[k] = true
+	sideSet := map[string]bool{}
+	for k := range sideMap {
+		sideSet[k] = true
 	}
-	return strmSet, subSet, strmMap, subMap
+	return strmSet, sideSet, strmMap, sideMap
 }
 
 func a_catRoot(outputDir, category string) string {
@@ -106,36 +108,36 @@ func a_catRoot(outputDir, category string) string {
 }
 
 // syncCore: 核心同步：对比期望与现有，删除多余、生成缺失
-func (a *App) syncCore(expectedStrm, expectedSubs map[string]bool, strmMap, subMap map[string]map[string]any, outputDir, serverBase string, includeSubtitles bool, dryRun bool, label string, scanRoot string) map[string]any {
+func (a *App) syncCore(expectedStrm, expectedSide map[string]bool, strmMap, sideMap map[string]map[string]any, outputDir, serverBase string, ds downloadSettings, dryRun bool, label string, scanRoot string) map[string]any {
 	outRootDir := filepath.Clean(outputDir)
 	if scanRoot == "" {
 		scanRoot = outRootDir
 	}
-	existingStrm, existingSubs := getExistingFiles(scanRoot)
+	existingStrm, existingSide := getExistingFiles(scanRoot, ds)
 	existingStrmSet := map[string]bool{}
 	for _, f := range existingStrm {
 		existingStrmSet[f] = true
 	}
-	existingSubsSet := map[string]bool{}
-	for _, f := range existingSubs {
-		existingSubsSet[f] = true
+	existingSideSet := map[string]bool{}
+	for _, f := range existingSide {
+		existingSideSet[f] = true
 	}
 
 	toDeleteStrm := setDiff(existingStrmSet, expectedStrm)
-	toDeleteSubs := setDiff(existingSubsSet, expectedSubs)
+	toDeleteSide := setDiff(existingSideSet, expectedSide)
 	toCreateStrm := setDiff(expectedStrm, existingStrmSet)
-	toCreateSubs := setDiff(expectedSubs, existingSubsSet)
+	toCreateSide := setDiff(expectedSide, existingSideSet)
 
 	result := map[string]any{
 		"lib_id":         label,
 		"expected_strm":  len(expectedStrm),
-		"expected_subs":  len(expectedSubs),
+		"expected_subs":  len(expectedSide),
 		"existing_strm":  len(existingStrm),
-		"existing_subs":  len(existingSubs),
+		"existing_subs":  len(existingSide),
 		"to_delete_strm": len(toDeleteStrm),
-		"to_delete_subs": len(toDeleteSubs),
+		"to_delete_subs": len(toDeleteSide),
 		"to_create_strm": len(toCreateStrm),
-		"to_create_subs": len(toCreateSubs),
+		"to_create_subs": len(toCreateSide),
 		"deleted_strm":   []string{},
 		"deleted_subs":   []string{},
 		"created_strm":   []string{},
@@ -166,13 +168,13 @@ func (a *App) syncCore(expectedStrm, expectedSubs map[string]bool, strmMap, subM
 		}
 	}
 
-	// 删除多余的字幕
-	for f := range toDeleteSubs {
+	// 删除多余的附属文件（字幕/nfo/图片）
+	for f := range toDeleteSide {
 		if err := os.Remove(f); err != nil {
-			result["errors"] = append(result["errors"].([]string), "删除字幕失败 "+f+": "+err.Error())
+			result["errors"] = append(result["errors"].([]string), "删除附属文件失败 "+f+": "+err.Error())
 		} else {
 			result["deleted_subs"] = append(result["deleted_subs"].([]string), relOf(f))
-			log.Printf("[同步] 删除字幕: %s", relOf(f))
+			log.Printf("[同步] 删除附属文件: %s", relOf(f))
 		}
 	}
 
@@ -202,30 +204,30 @@ func (a *App) syncCore(expectedStrm, expectedSubs map[string]bool, strmMap, subM
 		}
 	})
 
-	// 下载缺失的字幕
-	if includeSubtitles {
+	// 下载缺失的附属文件（字幕/nfo/图片），线程数与重试次数由配置控制
+	if ds.enabled && len(toCreateSide) > 0 {
 		cfg := a.cfg.Config()
 		loggedIn := a.panLoggedIn()
-		if !loggedIn && len(toCreateSubs) > 0 {
-			result["subtitle_skipped"] = "未登录 123 网盘，跳过字幕下载"
+		if !loggedIn {
+			result["sidecar_skipped"] = "未登录 123 网盘，跳过附属文件下载"
 			return result
 		}
 		fastMode := cfg["mode"] == "fast"
-		downloadSub := func(subPath string) {
-			fileInfo, ok := subMap[subPath]
+		downloadSide := func(path string) {
+			fileInfo, ok := sideMap[path]
 			if !ok {
 				return
 			}
-			if a.downloadSubtitleFile(fileInfo, subPath, asBool(fastMode)) {
+			if a.downloadSidecarFile(fileInfo, path, asBool(fastMode), ds.retries) {
 				mu.Lock()
-				result["created_subs"] = append(result["created_subs"].([]string), relOf(subPath))
+				result["created_subs"] = append(result["created_subs"].([]string), relOf(path))
 				mu.Unlock()
 			}
 		}
-		parallelStrings(toCreateSubs, 8, func(s string) {
-			if err := safeRun(func() { downloadSub(s) }); err != nil {
+		parallelStrings(toCreateSide, ds.threads, func(s string) {
+			if err := safeRun(func() { downloadSide(s) }); err != nil {
 				mu.Lock()
-				result["errors"] = append(result["errors"].([]string), "下载字幕失败 "+s+": "+err.Error())
+				result["errors"] = append(result["errors"].([]string), "下载附属文件失败 "+s+": "+err.Error())
 				mu.Unlock()
 			}
 		})
@@ -340,6 +342,7 @@ func parallelStrings(set map[string]bool, workers int, fn func(string)) {
 // syncAllLibraries: 合并全部库的期望后整体对比
 func (a *App) syncAllLibraries(outputDir, serverBase string, includeSubtitles bool) map[string]any {
 	cfg := a.cfg.Config()
+	ds := a.getDownloadSettings()
 	if outputDir == "" {
 		outputDir = asString(cfg["output_dir"])
 	}
@@ -366,10 +369,10 @@ func (a *App) syncAllLibraries(outputDir, serverBase string, includeSubtitles bo
 		}
 	}
 
-	expectedStrm, expectedSubs, strmMap, subMap := collectExpected(allLibs, outputDir, includeSubtitles)
-	result := a.syncCore(expectedStrm, expectedSubs, strmMap, subMap, outputDir, serverBase, includeSubtitles, false, "all", outRootDir)
+	expectedStrm, expectedSide, strmMap, sideMap := collectExpected(allLibs, outputDir, ds)
+	result := a.syncCore(expectedStrm, expectedSide, strmMap, sideMap, outputDir, serverBase, ds, false, "all", outRootDir)
 
-	log.Printf("[同步] 完成: 删除 STRM %d 个 / 字幕 %d 个, 生成 STRM %d 个 / 字幕 %d 个, 错误 %d 个",
+	log.Printf("[同步] 完成: 删除 STRM %d 个 / 附属文件 %d 个, 生成 STRM %d 个 / 附属文件 %d 个, 错误 %d 个",
 		len(result["deleted_strm"].([]string)),
 		len(result["deleted_subs"].([]string)),
 		len(result["created_strm"].([]string)),

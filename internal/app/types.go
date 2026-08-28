@@ -1,6 +1,9 @@
 package app
 
-import "regexp"
+import (
+	"regexp"
+	"strings"
+)
 
 var VIDEO_EXTS = map[string]bool{
 	".mp4": true, ".mkv": true, ".ts": true, ".m2ts": true,
@@ -14,14 +17,40 @@ var SUBTITLE_EXTS = map[string]bool{
 	".sub": true, ".sup": true,
 }
 
+// NFO_EXTS: 元数据文件（Kodi/Emby/Jellyfin 刮削信息）
+var NFO_EXTS = map[string]bool{
+	".nfo": true,
+}
+
+// IMAGE_EXTS: 图片文件（海报/剧照/缩略图等）
+var IMAGE_EXTS = map[string]bool{
+	".jpg": true, ".jpeg": true, ".png": true, ".webp": true,
+	".gif": true, ".bmp": true, ".tbn": true,
+}
+
+// sidecarType: 返回非视频附属文件的类型；非目标类型返回空字符串。
+// 返回值为 "subtitle" / "nfo" / "image"。
+func sidecarType(ext string) string {
+	ext = strings.ToLower(ext)
+	switch {
+	case SUBTITLE_EXTS[ext]:
+		return "subtitle"
+	case NFO_EXTS[ext]:
+		return "nfo"
+	case IMAGE_EXTS[ext]:
+		return "image"
+	}
+	return ""
+}
+
 const BAD_CHARS = `<>:"/\\|?*`
 
 var CATEGORY_DIRS = map[string]string{
-	"电影":  "电影",
-	"剧集":  "剧集",
-	"动漫":  "动漫",
-	"纪录片": "纪录片",
-	"综艺":  "综艺",
+	"电影":   "电影",
+	"剧集":   "剧集",
+	"动漫":   "动漫",
+	"纪录片":  "纪录片",
+	"综艺":   "综艺",
 	"定时归档": "定时归档",
 }
 
@@ -71,13 +100,17 @@ type GenReq struct {
 }
 
 type ConfigReq struct {
-	OutputDir        string `json:"output_dir"`
-	ServerBase       string `json:"server_base"`
-	IncludeSubtitles bool   `json:"include_subtitles"`
-	PanUsername      string `json:"pan_username"`
-	PanPassword      string `json:"pan_password"`
-	CacheFolderID    *int64 `json:"cache_folder_id"`
-	CacheFolderName  string `json:"cache_folder_name"`
+	OutputDir        string   `json:"output_dir"`
+	ServerBase       string   `json:"server_base"`
+	IncludeSubtitles bool     `json:"include_subtitles"`
+	PanUsername      string   `json:"pan_username"`
+	PanPassword      string   `json:"pan_password"`
+	CacheFolderID    *int64   `json:"cache_folder_id"`
+	CacheFolderName  string   `json:"cache_folder_name"`
+	DownloadEnabled  *bool    `json:"download_enabled"`
+	DownloadTypes    []string `json:"download_types"`
+	DownloadThreads  *int     `json:"download_threads"`
+	DownloadRetries  *int     `json:"download_retries"`
 }
 
 type UpdateLibReq struct {

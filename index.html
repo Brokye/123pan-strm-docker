@@ -1738,6 +1738,36 @@ body {
         </div>
         
         <div class="form-group">
+          <label class="form-label">同步下载附属文件</label>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <input type="checkbox" id="dlEnabled" style="width:17px;height:17px;accent-color:var(--accent-blue);cursor:pointer">
+            <span style="font-size:13px;font-weight:500">开启下载（生成 STRM 时同步下载到本地）</span>
+          </div>
+          <div style="display:flex;gap:18px;flex-wrap:wrap">
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="dlSub" value="subtitle" style="width:16px;height:16px;accent-color:var(--accent-blue);cursor:pointer">字幕
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="dlNfo" value="nfo" style="width:16px;height:16px;accent-color:var(--accent-blue);cursor:pointer">元数据 NFO
+            </label>
+            <label style="display:inline-flex;align-items:center;gap:6px;font-size:13px;cursor:pointer">
+              <input type="checkbox" id="dlImg" value="image" style="width:16px;height:16px;accent-color:var(--accent-blue);cursor:pointer">图片
+            </label>
+          </div>
+        </div>
+        
+        <div class="form-group" style="display:flex;gap:12px">
+          <div style="flex:1">
+            <label class="form-label">下载线程数</label>
+            <input type="number" class="vp-input" id="dlThreads" min="1" max="32" value="4">
+          </div>
+          <div style="flex:1">
+            <label class="form-label">失败重试次数</label>
+            <input type="number" class="vp-input" id="dlRetries" min="0" max="10" value="3">
+          </div>
+        </div>
+        
+        <div class="form-group">
           <label class="form-label">缓存目录（可选）</label>
           <div style="display:flex;gap:8px">
             <input type="text" class="vp-input" id="cacheFolderName" placeholder="未指定：播放时自动创建并 24h 清理" readonly style="flex:1;background:rgba(128,128,128,.06)">
@@ -2401,6 +2431,14 @@ async function loadCfg() {
     document.getElementById('panPass').value = c.pan_password || '';
     var cfEl = document.getElementById('cacheFolderName');
     if (cfEl) cfEl.value = (Number(c.cache_folder_id) > 0) ? (c.cache_folder_name || ('文件夹 ' + c.cache_folder_id)) : '';
+    // 下载选项
+    document.getElementById('dlEnabled').checked = c.download_enabled !== false;
+    var types = c.download_types || [];
+    document.getElementById('dlSub').checked = types.indexOf('subtitle') >= 0;
+    document.getElementById('dlNfo').checked = types.indexOf('nfo') >= 0;
+    document.getElementById('dlImg').checked = types.indexOf('image') >= 0;
+    document.getElementById('dlThreads').value = parseInt(c.download_threads) > 0 ? parseInt(c.download_threads) : 4;
+    document.getElementById('dlRetries').value = (c.download_retries == null) ? 3 : c.download_retries;
   } catch(e) {
     log('配置加载中...');
   }
@@ -2411,11 +2449,21 @@ async function saveCfg() {
   var s = document.getElementById('srvBase').value;
   var u = document.getElementById('panUser').value;
   var p = document.getElementById('panPass').value;
+  var types = [];
+  if (document.getElementById('dlSub').checked) types.push('subtitle');
+  if (document.getElementById('dlNfo').checked) types.push('nfo');
+  if (document.getElementById('dlImg').checked) types.push('image');
   try {
     await api('/api/config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ output_dir: o, server_base: s, pan_username: u, pan_password: p })
+      body: JSON.stringify({
+        output_dir: o, server_base: s, pan_username: u, pan_password: p,
+        download_enabled: document.getElementById('dlEnabled').checked,
+        download_types: types,
+        download_threads: parseInt(document.getElementById('dlThreads').value) || 4,
+        download_retries: parseInt(document.getElementById('dlRetries').value) || 0
+      })
     });
     log('✓ 设置已保存');
   } catch(e) {
@@ -2870,11 +2918,11 @@ async function syncAllSTRM() {
   if (syncAllBusy) return;
   syncAllBusy = true;
   try {
-    setProgress('gen', true, 0, '正在准备同步 STRM 与字幕...');
+    setProgress('gen', true, 0, '正在准备同步 STRM 与附属文件...');
     var j = await api('/api/sync/all', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ include_subtitles: true })
+      body: JSON.stringify({})
     });
     var res = await pollTask(j.task_id, function(u) {
       setProgress('gen', true, u.progress || 0, u.message || '');
@@ -2882,7 +2930,7 @@ async function syncAllSTRM() {
     setProgress('gen', false);
     var r = res.result || {};
     var msg = '删除 ' + (r.total_deleted_strm || 0) + ' 个多余 STRM，生成 ' + (r.total_created_strm || 0) + ' 个缺失 STRM';
-    msg += '，下载字幕 ' + (r.total_created_subs || 0) + ' 个';
+    msg += '，下载附属文件 ' + (r.total_created_subs || 0) + ' 个';
     if (r.total_errors) msg += '，错误 ' + r.total_errors + ' 个';
     log('✓ ' + msg);
     toast(msg, 'success');

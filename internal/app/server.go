@@ -169,6 +169,18 @@ func (a *App) handleConfig(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		c["include_subtitles"] = req.IncludeSubtitles
+		if req.DownloadEnabled != nil {
+			c["download_enabled"] = *req.DownloadEnabled
+		}
+		if req.DownloadTypes != nil {
+			c["download_types"] = req.DownloadTypes
+		}
+		if req.DownloadThreads != nil {
+			c["download_threads"] = *req.DownloadThreads
+		}
+		if req.DownloadRetries != nil {
+			c["download_retries"] = *req.DownloadRetries
+		}
 		a.cfg.SaveConfig(c)
 		a.cfg.UpdateSettingsAccount(asString(c["pan_username"]), asString(c["pan_password"]))
 		a.ensureCacheFile()

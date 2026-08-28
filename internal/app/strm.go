@@ -2,9 +2,7 @@ package app
 
 import (
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -19,37 +17,7 @@ func makePlayURL(base string, fileID int, etag string, size int64, filename stri
 	return strings.TrimRight(base, "/") + fmt.Sprintf("/play/%d/%s/%d/%s", fileID, etagEnc, size, fnEnc)
 }
 
-func (a *App) downloadSubtitleFile(fileInfo map[string]any, targetPath string, fastMode bool) bool {
-	name := filepath.Base(asString(fileInfo["path"]))
-	url := a.getFileURLWithEtagCandidates(name, asString(fileInfo["etag"]), firstInt64(fileInfo, "size"), fastMode)
-	if url == "" || strings.Contains(url, "222.186.21.40:33333/NGGYU.mp4") {
-		log.Printf("[字幕] 获取直链失败，跳过: %s", name)
-		return false
-	}
-	client := &http.Client{Timeout: 30 * time.Second}
-	req, _ := http.NewRequest("GET", url, nil)
-	req.Header.Set("Referer", "https://yun.123pan.com/")
-	resp, err := client.Do(req)
-	if err != nil {
-		log.Printf("[字幕] 下载失败: %s: %v", name, err)
-		return false
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode == 200 {
-		b, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return false
-		}
-		os.MkdirAll(filepath.Dir(targetPath), 0o755)
-		os.WriteFile(targetPath, b, 0o644)
-		log.Printf("[字幕] 已下载: %s", targetPath)
-		return true
-	}
-	log.Printf("[字幕] 下载状态异常 %d: %s", resp.StatusCode, name)
-	return false
-}
-
-// generateStrmTask: 先生成 STRM，再下载字幕（带百分比进度）
+// generateStrmTask: 先生成 STRM，再按配置并发下载附属文件（字幕/nfo/图片，带重试）
 // progress 回调返回事件 map
 func (a *App) generateStrmTask(libID, outputDir, serverBase string, includeSubtitles bool) func(emit func(map[string]any)) {
 	return func(emit func(map[string]any)) {
@@ -60,6 +28,7 @@ func (a *App) generateStrmTask(libID, outputDir, serverBase string, includeSubti
 		category, _ := lib["category"].(string)
 		cfg := a.cfg.Config()
 		fastMode := cfg["mode"] == "fast"
+		ds := a.getDownloadSettings()
 		outRoot := filepath.Clean(outputDir)
 		if sub, ok := CATEGORY_DIRS[category]; ok {
 			outRoot = filepath.Join(outRoot, sub)
@@ -71,7 +40,7 @@ func (a *App) generateStrmTask(libID, outputDir, serverBase string, includeSubti
 			etag string
 			size int64
 		}
-		var videos, subs []fl
+		var videos, sidecars []fl
 		files, _ := lib["files"].([]any)
 		for _, f := range files {
 			fm, ok := f.(map[string]any)
@@ -83,14 +52,16 @@ func (a *App) generateStrmTask(libID, outputDir, serverBase string, includeSubti
 			item := fl{path: asString(fm["path"]), idx: int(firstInt64(fm, "idx")), etag: asString(fm["etag"]), size: firstInt64(fm, "size")}
 			if VIDEO_EXTS[ext] {
 				videos = append(videos, item)
-			} else if includeSubtitles && SUBTITLE_EXTS[ext] {
-				subs = append(subs, item)
+				continue
+			}
+			if kind := sidecarType(ext); kind != "" && ds.wants(kind) {
+				sidecars = append(sidecars, item)
 			}
 		}
 
 		count := 0
-		subtitles := 0
-		skipped := 0
+		downloaded := 0
+		failed := 0
 		examples := []string{}
 
 		// 第一阶段：生成所有 STRM
@@ -111,38 +82,52 @@ func (a *App) generateStrmTask(libID, outputDir, serverBase string, includeSubti
 			})
 		}
 
-		// 第二阶段：下载字幕
-		if len(subs) > 0 {
-			emit(map[string]any{"message": "生成完成，正在下载字幕...", "progress": 80})
-			for j, f := range subs {
-				rel := safeRelPath(f.path)
-				target := filepath.Join(outRoot, rel)
-				if a.downloadSubtitleFile(map[string]any{"path": f.path, "etag": f.etag, "size": f.size}, target, fastMode) {
-					subtitles++
-				} else {
-					skipped++
-				}
-				if len(examples) < 10 {
-					examples = append(examples, target)
-				}
-				emit(map[string]any{
-					"message":  fmt.Sprintf("正在下载字幕 (%d/%d)...", j+1, len(subs)),
-					"progress": 80 + int((j+1)*20/len(subs)),
-				})
+		// 第二阶段：并发下载附属文件（字幕/nfo/图片），线程数由配置控制
+		if len(sidecars) > 0 {
+			emit(map[string]any{"message": "生成完成，正在下载附属文件...", "progress": 80})
+			var mu sync.Mutex
+			var wg sync.WaitGroup
+			sem := make(chan struct{}, ds.threads)
+			for _, f := range sidecars {
+				wg.Add(1)
+				go func(f fl) {
+					defer wg.Done()
+					sem <- struct{}{}
+					defer func() { <-sem }()
+					rel := safeRelPath(f.path)
+					target := filepath.Join(outRoot, rel)
+					ok := a.downloadSidecarFile(map[string]any{"path": f.path, "etag": f.etag, "size": f.size}, target, fastMode, ds.retries)
+					mu.Lock()
+					if ok {
+						downloaded++
+					} else {
+						failed++
+					}
+					done := downloaded + failed
+					if len(examples) < 10 {
+						examples = append(examples, target)
+					}
+					mu.Unlock()
+					emit(map[string]any{
+						"message":  fmt.Sprintf("正在下载附属文件 (%d/%d)...", done, len(sidecars)),
+						"progress": 80 + int(done*20/len(sidecars)),
+					})
+				}(f)
 			}
+			wg.Wait()
 		} else {
-			emit(map[string]any{"message": "无字幕文件", "progress": 100})
+			emit(map[string]any{"message": "无需要下载的附属文件", "progress": 100})
 		}
 
 		emit(map[string]any{"result": map[string]any{
 			"count":      count,
-			"subtitles":  subtitles,
-			"skipped":    skipped,
+			"downloaded": downloaded,
+			"failed":     failed,
 			"output_dir": outRoot,
 			"examples":   examples,
 		}})
-		log.Printf("[生成] 库 %s 完成: 生成 STRM %d 个, 字幕 %d 个, 跳过 %d 个 → %s",
-			libID, count, subtitles, skipped, outRoot)
+		log.Printf("[生成] 库 %s 完成: 生成 STRM %d 个, 下载附属文件 %d 个, 失败 %d 个 → %s",
+			libID, count, downloaded, failed, outRoot)
 	}
 }
 

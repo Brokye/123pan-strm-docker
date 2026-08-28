@@ -176,6 +176,18 @@ func (c *Config) Config() map[string]any {
 	if _, ok := out["include_subtitles"]; !ok {
 		out["include_subtitles"] = false
 	}
+	if _, ok := out["download_enabled"]; !ok {
+		out["download_enabled"] = true
+	}
+	if _, ok := out["download_types"]; !ok {
+		out["download_types"] = []any{"subtitle", "nfo", "image"}
+	}
+	if _, ok := out["download_threads"]; !ok {
+		out["download_threads"] = 4
+	}
+	if _, ok := out["download_retries"]; !ok {
+		out["download_retries"] = 3
+	}
 	if _, ok := out["mode"]; !ok {
 		out["mode"] = "cache"
 	}
