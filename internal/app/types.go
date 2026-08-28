@@ -140,3 +140,4 @@ type TaskState struct {
 	Error    string `json:"error"`
 	Updated  int64  `json:"updated"`
 }
+
