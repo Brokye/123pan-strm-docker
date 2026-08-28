@@ -111,6 +111,10 @@ type ConfigReq struct {
 	DownloadTypes    []string `json:"download_types"`
 	DownloadThreads  *int     `json:"download_threads"`
 	DownloadRetries  *int     `json:"download_retries"`
+	EmbyProxyEnabled *bool    `json:"emby_proxy_enabled"`
+	EmbyProxyPort    *int     `json:"emby_proxy_port"`
+	EmbyURL          *string  `json:"emby_url"`
+	EmbyAPIKey       *string  `json:"emby_api_key"`
 }
 
 type UpdateLibReq struct {

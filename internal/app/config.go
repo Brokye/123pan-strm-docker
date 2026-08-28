@@ -188,6 +188,18 @@ func (c *Config) Config() map[string]any {
 	if _, ok := out["download_retries"]; !ok {
 		out["download_retries"] = 3
 	}
+	if _, ok := out["emby_proxy_enabled"]; !ok {
+		out["emby_proxy_enabled"] = false
+	}
+	if _, ok := out["emby_proxy_port"]; !ok {
+		out["emby_proxy_port"] = 8098
+	}
+	if _, ok := out["emby_url"]; !ok {
+		out["emby_url"] = "http://127.0.0.1:8096"
+	}
+	if _, ok := out["emby_api_key"]; !ok {
+		out["emby_api_key"] = ""
+	}
 	if _, ok := out["mode"]; !ok {
 		out["mode"] = "cache"
 	}

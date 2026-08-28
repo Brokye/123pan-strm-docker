@@ -1784,6 +1784,52 @@ body {
           保存基础设置
         </button>
       </div>
+
+      <div class="glass-card">
+        <div class="card-header">
+          <div class="card-icon purple">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 10 4 15 9 20"/>
+              <path d="M20 4v7a4 4 0 0 1-4 4H4"/>
+            </svg>
+          </div>
+          <h2 class="card-title">Emby 反向代理</h2>
+        </div>
+        
+        <div class="form-group">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <input type="checkbox" id="embyProxyEnabled" style="width:17px;height:17px;accent-color:var(--accent-blue);cursor:pointer">
+            <span style="font-size:13px;font-weight:500">开启反向代理（302 直连播放）</span>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Emby 地址</label>
+          <input type="text" class="vp-input" id="embyUrl" placeholder="http://127.0.0.1:8096">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">Emby API Key</label>
+          <input type="text" class="vp-input" id="embyApiKey" placeholder="Emby 控制台 → 高级 → API 密钥">
+        </div>
+        
+        <div class="form-group">
+          <label class="form-label">反向代理端口</label>
+          <input type="number" class="vp-input" id="embyProxyPort" min="1" max="65535" value="8098">
+        </div>
+        
+        <p style="margin:0 0 14px;font-size:12px;color:var(--text-dim, #94a3b8);line-height:1.6">
+          把 Emby 客户端服务器地址改为 <code>http://NAS_IP:反向代理端口</code>。
+          直连播放时反向代理会 302 跳转到 123 云盘 CDN，客户端直接从 CDN 拉流，绕过 Emby 服务端代理；需要转码时自动回退为普通代理。
+        </p>
+        
+        <button class="vp-btn success" onclick="saveEmbyCfg()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+          保存 Emby 设置
+        </button>
+      </div>
     </div>
 
     <div class="right-column">
@@ -2439,6 +2485,11 @@ async function loadCfg() {
     document.getElementById('dlImg').checked = types.indexOf('image') >= 0;
     document.getElementById('dlThreads').value = parseInt(c.download_threads) > 0 ? parseInt(c.download_threads) : 4;
     document.getElementById('dlRetries').value = (c.download_retries == null) ? 3 : c.download_retries;
+    // Emby 反向代理
+    document.getElementById('embyProxyEnabled').checked = !!c.emby_proxy_enabled;
+    document.getElementById('embyUrl').value = c.emby_url || 'http://127.0.0.1:8096';
+    document.getElementById('embyApiKey').value = c.emby_api_key || '';
+    document.getElementById('embyProxyPort').value = parseInt(c.emby_proxy_port) > 0 ? parseInt(c.emby_proxy_port) : 8098;
   } catch(e) {
     log('配置加载中...');
   }
@@ -2466,6 +2517,30 @@ async function saveCfg() {
       })
     });
     log('✓ 设置已保存');
+  } catch(e) {
+    toast(e.message, 'error');
+  }
+}
+
+async function saveEmbyCfg() {
+  var url = document.getElementById('embyUrl').value.trim();
+  var key = document.getElementById('embyApiKey').value.trim();
+  var port = parseInt(document.getElementById('embyProxyPort').value);
+  if (!url) { toast('请填写 Emby 地址', 'warn'); return; }
+  if (!(port > 0 && port < 65536)) { toast('反向代理端口无效', 'warn'); return; }
+  try {
+    await api('/api/config', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        emby_proxy_enabled: document.getElementById('embyProxyEnabled').checked,
+        emby_url: url,
+        emby_api_key: key,
+        emby_proxy_port: port
+      })
+    });
+    var on = document.getElementById('embyProxyEnabled').checked;
+    log('✓ Emby 反向代理设置已保存：' + (on ? ('已开启，端口 ' + port + ' → ' + url) : '已关闭'));
   } catch(e) {
     toast(e.message, 'error');
   }

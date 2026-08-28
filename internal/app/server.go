@@ -181,6 +181,18 @@ func (a *App) handleConfig(w http.ResponseWriter, r *http.Request) {
 		if req.DownloadRetries != nil {
 			c["download_retries"] = *req.DownloadRetries
 		}
+		if req.EmbyProxyEnabled != nil {
+			c["emby_proxy_enabled"] = *req.EmbyProxyEnabled
+		}
+		if req.EmbyProxyPort != nil {
+			c["emby_proxy_port"] = *req.EmbyProxyPort
+		}
+		if req.EmbyURL != nil {
+			c["emby_url"] = *req.EmbyURL
+		}
+		if req.EmbyAPIKey != nil {
+			c["emby_api_key"] = *req.EmbyAPIKey
+		}
 		a.cfg.SaveConfig(c)
 		a.cfg.UpdateSettingsAccount(asString(c["pan_username"]), asString(c["pan_password"]))
 		a.ensureCacheFile()
@@ -614,12 +626,15 @@ func RunServer() {
 	cfg.EnsureCacheFile()
 	app := NewApp(cfg)
 	app.startArchiveScheduler()
+	// Emby 反向代理常驻监听（开关按请求动态判断）
+	go app.startEmbyProxy()
 	addr := "0.0.0.0:" + cfg.DefaultPort
 	if host := os.Getenv("HOST"); host != "" {
 		addr = host + ":" + cfg.DefaultPort
 	}
 	fmt.Printf("STRM API: http://127.0.0.1:%s/\n", cfg.DefaultPort)
 	fmt.Printf("定时归档: http://127.0.0.1:%s/archive\n", cfg.DefaultPort)
+	fmt.Printf("Emby 反向代理: http://127.0.0.1:%d/ (开关: %v)\n", app.embyProxyPort(), app.embyProxyEnabled())
 	http.ListenAndServe(addr, app.handler())
 }
 

@@ -6,6 +6,8 @@ services:
     ports:
       # 左边是 NAS/宿主机端口，右边是容器端口
       - "8000:8000"
+      # Emby 反向代理端口（在 Web UI 里可自定义，需与下方保持一致）
+      - "8098:8098"
     environment:
       - TZ=Asia/Shanghai
       # 改成你的 NAS 局域网 IP；STRM 文件里会写这个地址
